@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Menu, LogOut, ShieldCheck, RefreshCw, Bell } from 'lucide-react';
 import { supabase } from './lib/supabase';
-import { syncEngine } from './lib/syncEngine';
+import { syncEngine, mapFromSupabase } from './lib/syncEngine';
 import { Dashboard } from './components/Dashboard';
 import { Clients } from './components/Clients';
 import { Products } from './components/Products';
@@ -55,7 +55,10 @@ const App: React.FC = () => {
         });
       } else {
         const { data, error } = await supabase.from('app_users').select('*').eq('email', email).single();
-        if (data) setCurrentUser(data);
+        if (data) {
+          const mappedUser = mapFromSupabase('app_users', data) as AppUser;
+          setCurrentUser(mappedUser);
+        }
       }
       refreshAllData();
     } catch (err) {
