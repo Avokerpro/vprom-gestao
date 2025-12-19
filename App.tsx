@@ -90,23 +90,15 @@ const App: React.FC = () => {
 
   const handleLogout = async () => {
     try {
-      // Limpa a sessão no Supabase
       await supabase.auth.signOut();
       
-      // Limpa os tokens do localStorage explicitamente
-      const keysToRemove = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && (key.includes('supabase.auth.token') || key.includes('vprom_'))) {
-          keysToRemove.push(key);
-        }
-      }
-      keysToRemove.forEach(k => localStorage.removeItem(k));
-
-      // Limpa o estado e força recarregamento total
+      // Limpeza agressiva de cache e tokens
+      localStorage.clear();
       setSession(null);
       setCurrentUser(null);
-      window.location.replace('/'); // replace para evitar voltar no histórico
+      
+      // Redirecionamento forçado para limpar memória da página
+      window.location.replace('/'); 
     } catch (err) {
       console.error("Erro ao sair:", err);
       window.location.reload();
@@ -150,12 +142,14 @@ const App: React.FC = () => {
     initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
-      setSession(newSession);
-      if (newSession?.user?.email) {
-        fetchUserProfile(newSession.user.email);
-      } else if (event === 'SIGNED_OUT') {
+      if (event === 'SIGNED_OUT') {
+        setSession(null);
         setCurrentUser(null);
-        setAuthLoading(false);
+      } else {
+        setSession(newSession);
+        if (newSession?.user?.email) {
+          fetchUserProfile(newSession.user.email);
+        }
       }
     });
 
@@ -222,10 +216,9 @@ const App: React.FC = () => {
             {activeTab === 'clients' && <Clients clients={clients} quotes={quotes} appointments={appointments} financials={financials} constructionSites={constructionSites} onAddClient={(c) => syncEngine.execute('clients', 'INSERT', c, () => setClients(prev => [...prev, c]))} onUpdateClient={(c) => syncEngine.execute('clients', 'UPDATE', c, () => setClients(prev => prev.map(cl => cl.id === c.id ? c : cl)))} onDeleteClient={(id) => syncEngine.execute('clients', 'DELETE', {id}, () => setClients(prev => prev.filter(cl => cl.id !== id)))} />}
             {activeTab === 'products' && <Products products={products} categories={[]} units={[]} onAddProduct={(p) => syncEngine.execute('products', 'INSERT', p, () => setProducts(prev => [...prev, p]))} onUpdateProduct={(p) => syncEngine.execute('products', 'UPDATE', p, () => setProducts(prev => prev.map(pr => pr.id === p.id ? p : pr)))} onDeleteProduct={(id) => syncEngine.execute('products', 'DELETE', {id}, () => setProducts(prev => prev.filter(p => p.id !== id)))} onAddCategory={()=>{}} onDeleteCategory={()=>{}} onAddUnit={()=>{}} onDeleteUnit={()=>{}} />}
             {activeTab === 'quotes' && <Quotes quotes={quotes} clients={clients} products={products} staff={staff} onAddQuote={(q) => syncEngine.execute('quotes', 'INSERT', q, () => setQuotes(prev => [q, ...prev]))} onUpdateQuote={(q) => syncEngine.execute('quotes', 'UPDATE', q, () => setQuotes(prev => prev.map(qu => qu.id === q.id ? q : qu)))} />}
-            {/* Fixed incorrect nested setConstructionSites call in onDeleteSite handler */}
             {activeTab === 'construction_sites' && <ConstructionSites sites={constructionSites} clients={clients} staff={staff} onAddSite={(s) => syncEngine.execute('construction_sites', 'INSERT', s, () => setConstructionSites(prev => [...prev, s]))} onUpdateSite={(s) => syncEngine.execute('construction_sites', 'UPDATE', s, () => setConstructionSites(prev => prev.map(st => st.id === s.id ? s : st)))} onDeleteSite={(id) => syncEngine.execute('construction_sites', 'DELETE', {id}, () => setConstructionSites(prev => prev.filter(s => s.id !== id)))} />}
             {activeTab === 'financials' && <Financials financials={financials} clients={clients} constructionSites={constructionSites} onAddTransaction={(t) => syncEngine.execute('financial_records', 'INSERT', t, () => setFinancials(prev => [t, ...prev]))} onUpdateTransaction={(t) => syncEngine.execute('financial_records', 'UPDATE', t, () => setFinancials(prev => prev.map(f => f.id === t.id ? t : f)))} />}
-            {activeTab === 'agenda' && <Agenda appointments={appointments} clients={clients} staff={staff} onAddAppointment={(a) => syncEngine.execute('appointments', 'INSERT', a, () => setAppointments(prev => [...prev, a]))} onUpdateAppointment={(a) => syncEngine.execute('appointments', 'UPDATE', a, () => setAppointments(prev => prev.map(ap => ap.id === a.id ? a : ap)))} onCreateQuoteFromAppointment={()=>{}} />}
+            {activeTab === 'agenda' && <Agenda appointments={appointments} clients={clients} staff={staff} onAddAppointment={(a) => syncEngine.execute('appointments', 'INSERT', a, () => setAppointments(prev => [...prev, a]))} onUpdateAppointment={(a) => syncEngine.execute('appointments', 'UPDATE', a, () => setAppointments(prev => prev.map(ap => ap.id === a.id ? a : ap)))} onDeleteAppointment={(id) => syncEngine.execute('appointments', 'DELETE', {id}, () => setAppointments(prev => prev.filter(a => a.id !== id)))} onCreateQuoteFromAppointment={()=>{}} />}
           </div>
         </main>
       </div>
