@@ -12,12 +12,13 @@
       "src": "https://vprom.com.br/wp-content/uploads/2023/06/cropped-favicon-vprom-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "https://vprom.com.br/wp-content/uploads/2023/06/cropped-favicon-vprom-512x512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     }
   ],
   "orientation": "portrait"
