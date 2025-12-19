@@ -1,0 +1,7 @@
+{
+  "name": "VPROM Management",
+  "description": "Sistema de gestão integrado para serviços de chapas cimentícias, controle de clientes, orçamentos e financeiro.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
