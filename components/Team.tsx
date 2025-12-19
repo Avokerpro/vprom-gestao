@@ -41,6 +41,7 @@ export const Team: React.FC<TeamProps> = ({ staff = [], onAddStaff, onUpdateStaf
         phone: formData.phone || '',
         email: formData.email || '',
         address: formData.address || '',
+        state: formData.state || '',
         status: (formData.status as any) || 'available'
       };
       if (editingMember) onUpdateStaff(payload);
@@ -100,7 +101,7 @@ export const Team: React.FC<TeamProps> = ({ staff = [], onAddStaff, onUpdateStaf
                 </div>
                 {member.address && (
                   <div className="flex items-center gap-2 text-[10px] text-gray-500 font-medium">
-                     <MapPin size={12} className="text-gray-400" /> <span className="truncate">{member.address}</span>
+                     <MapPin size={12} className="text-gray-400" /> <span className="truncate">{member.address} {member.state ? ` - ${member.state}` : ''}</span>
                   </div>
                 )}
               </div>
@@ -147,9 +148,15 @@ export const Team: React.FC<TeamProps> = ({ staff = [], onAddStaff, onUpdateStaf
             </div>
           </div>
 
-          <div>
-            <label className="text-[10px] font-black text-gray-500 uppercase ml-2 mb-1 block">Endereço Residencial</label>
-            <input type="text" className="w-full p-4 bg-white border border-gray-300 rounded-2xl text-sm text-gray-900 font-bold outline-none" value={formData.address || ''} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="Rua, Número, Bairro, Cidade..." />
+          <div className="grid grid-cols-4 gap-4">
+            <div className="col-span-3">
+              <label className="text-[10px] font-black text-gray-500 uppercase ml-2 mb-1 block">Endereço Residencial</label>
+              <input type="text" className="w-full p-4 bg-white border border-gray-300 rounded-2xl text-sm text-gray-900 font-bold outline-none" value={formData.address || ''} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="Rua, Número, Bairro..." />
+            </div>
+            <div className="col-span-1">
+              <label className="text-[10px] font-black text-gray-500 uppercase ml-2 mb-1 block">UF</label>
+              <input type="text" maxLength={2} className="w-full p-4 bg-white border border-gray-300 rounded-2xl text-sm text-gray-900 font-bold outline-none uppercase text-center" value={formData.state || ''} onChange={e => setFormData({...formData, state: e.target.value.toUpperCase()})} placeholder="SP" />
+            </div>
           </div>
 
           <button type="submit" className="w-full bg-vprom-dark text-white py-5 rounded-[2rem] font-black uppercase text-xs shadow-xl active:scale-95 transition-all mt-4">
