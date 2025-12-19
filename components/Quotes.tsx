@@ -62,17 +62,27 @@ export const Quotes: React.FC<QuotesProps> = ({ quotes = [], clients = [], produ
 
   const handleShareWhatsApp = (quote: Quote) => {
     const client = clients.find(c => c.id === quote.clientId);
+    const seller = staff.find(s => s.id === quote.staffId);
     if (!client) return;
+
+    const itemsText = (quote.items || []).map(item => {
+      const prod = products.find(p => p.id === item.productId);
+      return `* ${item.quantity} ${prod?.unit || 'un'} x ${prod?.name || 'Item'} (${formatCurrency(item.unitPrice)})`;
+    }).join('\n');
     
-    const text = `*PROPOSTA TÉCNICA - VPROM REVESTIMENTOS*\n\n` +
-      `Olá ${client.name},\n` +
-      `Seguem os detalhes do seu orçamento para revestimento cimentício:\n\n` +
-      `*MEMORIAL DESCRITIVO:*\n${quote.technicalDescription || 'Conforme projeto executivo.'}\n\n` +
-      `*VALOR TOTAL:* ${formatCurrency(quote.total)}\n\n` +
-      `Acesse a proposta detalhada para aprovação.\n` +
-      `Ficamos à disposição para agendar o início dos trabalhos!`;
+    const message = `ORÇAMENTO VPROM #${quote.id.slice(-4)} 📑\n\n` +
+      `Olá *${client.name}*, segue o detalhamento do seu orçamento:\n\n` +
+      `LISTA DE ITENS:\n${itemsText}\n\n` +
+      `--------------------------------\n` +
+      `💰 VALOR TOTAL: ${formatCurrency(quote.total)}\n` +
+      `--------------------------------\n\n` +
+      `Descrição Técnica:\n${quote.technicalDescription || 'Conforme projeto executivo.'}\n\n` +
+      `Ficamos à disposição para qualquer dúvida!\n\n` +
+      `Atenciosamente,\n` +
+      `*${seller?.name || 'Equipe VPROM'}* (Vendedor)\n` +
+      `VPROM - Chapas Cimentícias`;
     
-    const encoded = encodeURIComponent(text);
+    const encoded = encodeURIComponent(message);
     const phone = client.phone.replace(/\D/g, '');
     window.open(`https://wa.me/55${phone}?text=${encoded}`, '_blank');
     
@@ -85,7 +95,7 @@ export const Quotes: React.FC<QuotesProps> = ({ quotes = [], clients = [], produ
         alert("Este cliente não possui e-mail cadastrado.");
         return;
     }
-    const subject = encodeURIComponent("Proposta VPROM - Revestimentos Cimentícios");
+    const subject = encodeURIComponent(`Proposta VPROM #${quote.id.slice(-4)} - Revestimentos Cimentícios`);
     const body = encodeURIComponent(`Olá ${client.name},\n\nConforme solicitado, enviamos a proposta técnica no valor de ${formatCurrency(quote.total)}.\n\nDetalhes do serviço:\n${quote.technicalDescription}\n\nAtenciosamente,\nEquipe VPROM`);
     window.location.href = `mailto:${client.email}?subject=${subject}&body=${body}`;
     
@@ -201,7 +211,7 @@ export const Quotes: React.FC<QuotesProps> = ({ quotes = [], clients = [], produ
 
       <Modal isOpen={isViewModalOpen} onClose={() => setIsViewModalOpen(false)} title="Detalhamento da Proposta">
         {selectedQuote && (
-          <div className="space-y-6 print-container">
+          <div className="space-y-6">
             {/* Controles de Status (Não aparecem na impressão) */}
             <div className="no-print bg-gray-50 p-4 rounded-2xl flex flex-wrap gap-2 items-center justify-between border border-gray-100">
                <div className="flex items-center gap-2">
@@ -219,7 +229,7 @@ export const Quotes: React.FC<QuotesProps> = ({ quotes = [], clients = [], produ
             </div>
 
             {/* ÁREA DE IMPRESSÃO (Papel Timbrado Profissional) */}
-            <div className="printable bg-white p-8 rounded-[2rem] border-2 border-gray-50 shadow-sm print:border-0 print:shadow-none print:p-0">
+            <div id="quote-printable-area" className="printable bg-white p-8 rounded-[2rem] border-2 border-gray-50 shadow-sm print:border-0 print:shadow-none print:p-0">
                {/* Cabeçalho Proposta */}
                <div className="flex justify-between items-start mb-10 border-b-2 border-vprom-orange pb-8">
                   <div>
@@ -321,23 +331,45 @@ export const Quotes: React.FC<QuotesProps> = ({ quotes = [], clients = [], produ
       
       <style>{`
         @media print {
-          /* Esconde tudo exceto a área imprimível */
-          body * { visibility: hidden !important; }
-          .print-container, .print-container .printable, .print-container .printable * { 
-            visibility: visible !important; 
+          body > * {
+            display: none !important;
           }
-          .print-container {
-            position: fixed;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 9999;
-            background: white;
-            padding: 20px;
+          body, html {
+            height: auto !important;
+            overflow: visible !important;
+            background: white !important;
           }
-          .no-print { display: none !important; }
-          .Modal { background: white !important; padding: 0 !important; border: 0 !important; box-shadow: none !important; }
+          #root {
+            display: none !important;
+          }
+          .Modal, [role="dialog"], .fixed {
+            position: relative !important;
+            display: block !important;
+            background: white !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
+            box-shadow: none !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+          .printable {
+            display: block !important;
+            visibility: visible !important;
+            position: static !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+          }
+          /* Forçar a exibição do conteúdo de impressão mesmo dentro de modais ocultos por herança */
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
         }
       `}</style>
     </div>
