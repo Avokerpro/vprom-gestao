@@ -107,7 +107,8 @@ export const UserManagement: React.FC<UserManagementProps> = ({
               </div>
               <div>
                 <label className="text-[10px] font-black text-gray-500 uppercase ml-2 mb-2 block">Nível de Função</label>
-                <select className="w-full p-4 bg-white border border-gray-300 rounded-2xl text-sm font-bold text-gray-900 outline-none" value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})}>
+                {/* Cast e.target.value to AppRole to fix string to union type assignment error */}
+                <select className="w-full p-4 bg-white border border-gray-300 rounded-2xl text-sm font-bold text-gray-900 outline-none" value={formData.role} onChange={e => setFormData({...formData, role: e.target.value as AppRole})}>
                   <option value="seller">Vendedor</option>
                   <option value="technician">Técnico</option>
                   <option value="supervisor">Supervisor</option>
