@@ -69,7 +69,7 @@ export interface FinancialRecord {
   siteId?: string; 
 }
 
-export type QuoteStatus = 'draft' | 'sent' | 'approved' | 'rejected';
+export type QuoteStatus = 'draft' | 'sent' | 'in_analysis' | 'approved' | 'rejected';
 
 export interface Quote {
   id: string;
@@ -147,7 +147,13 @@ export interface AppNotification {
 }
 
 export const TRANSLATIONS = {
-  quote_status: { draft: 'Rascunho', sent: 'Enviado', approved: 'Aprovado', rejected: 'Recusado' },
+  quote_status: { 
+    draft: 'Rascunho', 
+    sent: 'Enviado', 
+    in_analysis: 'Em Análise',
+    approved: 'Aprovado', 
+    rejected: 'Recusado' 
+  },
   financial_status: { paid: 'Pago', pending: 'Pendente', overdue: 'Atrasado' },
   financial_category: {
     rev_vendas: 'Receita de Vendas',
