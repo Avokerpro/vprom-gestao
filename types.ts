@@ -1,5 +1,4 @@
 
-
 export interface Client {
   id: string;
   name: string;
@@ -19,8 +18,8 @@ export interface Product {
   unit: string;
   price: number;
   cost: number;
-  currentStock?: number;
-  minStock?: number;
+  currentStock: number;
+  minStock: number;
 }
 
 export interface StockMovement {
@@ -41,6 +40,7 @@ export interface Staff {
   phone: string;
   email?: string;
   address?: string; 
+  state?: string;
   status: 'available' | 'on_site' | 'vacation';
 }
 
@@ -82,7 +82,6 @@ export interface Quote {
   technicalDescription?: string;
 }
 
-// Added AppointmentStatus type for external usage
 export type AppointmentStatus = 'solicited' | 'to_visit' | 'visited' | 'closed_deal' | 'cancelled';
 
 export interface Appointment {
@@ -96,13 +95,11 @@ export interface Appointment {
   status: AppointmentStatus;
 }
 
-// Added ConstructionStatus type for external usage
 export type ConstructionStatus = 'planning' | 'in_progress' | 'completed' | 'paused';
 
 export interface ConstructionSite {
   id: string;
   clientId: string;
-  // Added optional fields used in mock data to satisfy TypeScript
   sellerId?: string;
   technicianId?: string;
   teamIds?: string[];
@@ -113,7 +110,6 @@ export interface ConstructionSite {
   description?: string;
 }
 
-// Added ProductCategory and ProductUnit interfaces
 export interface ProductCategory {
   id: string;
   name: string;
@@ -121,22 +117,25 @@ export interface ProductCategory {
 
 export interface ProductUnit {
   id: string;
-  label: string;
+  name: string;
 }
 
-// Added AppRole type
-export type AppRole = 'seller' | 'technician' | 'supervisor' | 'installer' | 'painter' | 'programmer';
+export interface AppRole {
+  id: string;
+  name: string;
+}
+
+export type AppUserRole = 'seller' | 'technician' | 'supervisor' | 'installer' | 'painter' | 'programmer';
 
 export interface AppUser {
   id: string;
   email: string;
   name: string;
-  role: AppRole;
+  role: AppUserRole | string;
   allowedTabs: string[];
   allowedCities: string[];
 }
 
-// Added AppNotification interface
 export interface AppNotification {
   id: string;
   title: string;
@@ -175,5 +174,6 @@ export const ALL_TABS = [
   { id: 'financials', label: 'Financeiro' },
   { id: 'team', label: 'Equipe' },
   { id: 'agenda', label: 'Agenda' },
-  { id: 'products', label: 'Produtos/Preços' }
+  { id: 'products', label: 'Produtos/Preços' },
+  { id: 'access', label: 'Acessos' }
 ];
