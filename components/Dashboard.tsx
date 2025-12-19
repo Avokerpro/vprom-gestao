@@ -59,21 +59,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ financials = [], clients =
     return { dayCount, weekCount, monthCount, upcoming: upcoming.sort((a,b) => a.date.localeCompare(b.date)).slice(0, 5) };
   }, [appointments]);
 
-  const expiringSites = useMemo(() => {
-    const safeSites = Array.isArray(constructionSites) ? constructionSites : [];
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    const nextWeek = new Date(today);
-    nextWeek.setDate(today.getDate() + 7);
-
-    return safeSites.filter(site => {
-      if (site.status === 'completed' || !site.expectedEndDate) return false;
-      const endDateStr = site.expectedEndDate;
-      const nextWeekStr = nextWeek.toISOString().split('T')[0];
-      return endDateStr <= nextWeekStr; 
-    }).sort((a,b) => a.expectedEndDate!.localeCompare(b.expectedEndDate!));
-  }, [constructionSites]);
-
   const chartData = useMemo(() => [
     { name: 'Entradas', amount: stats.totalIncome },
     { name: 'Saídas', amount: stats.totalExpenses },
@@ -99,8 +84,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ financials = [], clients =
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
-        <div className="xl:col-span-2 bg-gradient-to-r from-gray-900 to-gray-800 rounded-lg shadow-md p-6 text-white">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
+        <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-lg shadow-md p-6 text-white">
           <div className="flex justify-between items-start mb-4">
              <h3 className="text-lg font-bold flex items-center gap-2">
                <Calendar className="text-vprom-orange" /> Agenda de Compromissos
@@ -148,39 +133,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ financials = [], clients =
           )}
         </div>
 
-        <div className="bg-orange-50 rounded-lg shadow-md border border-orange-100 p-6">
-           <h3 className="text-lg font-bold flex items-center gap-2 text-orange-800 mb-2">
-              <HardHat className="text-orange-600" /> Obras Críticas
-           </h3>
-           <p className="text-sm text-gray-600 mb-4">Obras vencendo nos próximos 7 dias ou em atraso.</p>
-           
-           <div className="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar">
-              {expiringSites.length === 0 ? (
-                <div className="text-center py-8 text-gray-400">
-                   <CheckCircle className="mx-auto mb-2 text-green-500" size={32}/>
-                   <p className="text-sm">Sem obras em atraso.</p>
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 flex flex-col justify-center items-center text-center">
+            <CheckCircle className="mb-4 text-vprom-orange" size={48} />
+            <h3 className="text-xl font-black text-vprom-dark uppercase">Bem-vindo ao VPROM</h3>
+            <p className="text-gray-400 text-sm font-bold uppercase mt-2">Sua gestão de revestimentos simplificada.</p>
+            <div className="mt-6 grid grid-cols-2 gap-4 w-full">
+                <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                    <p className="text-[10px] font-black text-gray-400 uppercase">Clientes</p>
+                    <p className="text-xl font-black text-vprom-dark">{clients.length}</p>
                 </div>
-              ) : (
-                expiringSites.map(site => {
-                   const client = Array.isArray(clients) ? clients.find(c => c.id === site.clientId) : null;
-                   const isLate = site.expectedEndDate && new Date(site.expectedEndDate) < new Date(new Date().setHours(0,0,0,0));
-                   return (
-                      <div key={site.id} onClick={() => onNavigate('construction_sites')} className="bg-white p-3 rounded-lg border border-orange-200 shadow-sm flex flex-col gap-1 cursor-pointer hover:bg-orange-100 transition group">
-                         <div className="flex justify-between items-start">
-                            <h4 className="font-bold text-gray-800 text-sm truncate group-hover:text-orange-800">{client?.name || 'Cliente'}</h4>
-                            {isLate && <AlertCircle size={16} className="text-red-500" />}
-                         </div>
-                         <div className="flex justify-between items-center text-xs mt-1">
-                            <span className="text-gray-500 truncate">{site.address}</span>
-                            <span className={`font-bold px-2 py-0.5 rounded ${isLate ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>
-                               {site.expectedEndDate ? new Date(site.expectedEndDate).toLocaleDateString() : '--'}
-                            </span>
-                         </div>
-                      </div>
-                   )
-                })
-              )}
-           </div>
+                <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                    <p className="text-[10px] font-black text-gray-400 uppercase">Obras</p>
+                    <p className="text-xl font-black text-vprom-dark">{constructionSites.length}</p>
+                </div>
+            </div>
         </div>
       </div>
 
