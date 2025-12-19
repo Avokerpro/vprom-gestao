@@ -12,9 +12,10 @@ import { Agenda } from './components/Agenda';
 import { Team } from './components/Team';
 import { ConstructionSites } from './components/ConstructionSites';
 import { Inventory } from './components/Inventory';
+import { UserManagement } from './components/UserManagement';
 import Login from './components/Login';
 import { NotificationsPanel } from './components/NotificationsPanel';
-import { Client, Product, FinancialRecord, Quote, Appointment, Staff, ConstructionSite, StockMovement, AppUser, AppNotification, ALL_TABS } from './types';
+import { Client, Product, FinancialRecord, Quote, Appointment, Staff, ConstructionSite, StockMovement, AppUser, AppNotification, ALL_TABS, AppRole, ProductCategory, ProductUnit } from './types';
 
 const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
@@ -36,6 +37,10 @@ const App: React.FC = () => {
   const [staff, setStaff] = useState<Staff[]>([]);
   const [constructionSites, setConstructionSites] = useState<ConstructionSite[]>([]);
   const [inventoryMovements, setInventoryMovements] = useState<StockMovement[]>([]);
+  const [users, setUsers] = useState<AppUser[]>([]);
+  const [roles, setRoles] = useState<AppRole[]>([]);
+  const [categories, setCategories] = useState<ProductCategory[]>([]);
+  const [units, setUnits] = useState<ProductUnit[]>([]);
 
   const fetchUserProfile = async (email: string) => {
     try {
@@ -49,9 +54,8 @@ const App: React.FC = () => {
           allowedCities: ['Todas'] 
         });
       } else {
-        const cachedUsers = syncEngine.getLocal<AppUser>('app_users');
-        const user = cachedUsers.find(u => u.email === email);
-        if (user) setCurrentUser(user);
+        const { data, error } = await supabase.from('app_users').select('*').eq('email', email).single();
+        if (data) setCurrentUser(data);
       }
       refreshAllData();
     } catch (err) {
@@ -64,7 +68,7 @@ const App: React.FC = () => {
   const refreshAllData = async () => {
     setIsSyncing(true);
     try {
-      const [c, p, f, q, a, s, cs, im] = await Promise.all([
+      const [c, p, f, q, a, s, cs, im, us, ro, ca, un] = await Promise.all([
         syncEngine.pullAll('clients'),
         syncEngine.pullAll('products'),
         syncEngine.pullAll('financial_records'),
@@ -72,7 +76,11 @@ const App: React.FC = () => {
         syncEngine.pullAll('appointments'),
         syncEngine.pullAll('staff'),
         syncEngine.pullAll('construction_sites'),
-        syncEngine.pullAll('inventory_movements')
+        syncEngine.pullAll('inventory_movements'),
+        syncEngine.pullAll('app_users'),
+        syncEngine.pullAll('app_roles'),
+        syncEngine.pullAll('product_categories'),
+        syncEngine.pullAll('product_units')
       ]);
       
       setClients(c || []);
@@ -83,6 +91,10 @@ const App: React.FC = () => {
       setStaff(s || []);
       setConstructionSites(cs || []);
       setInventoryMovements(im || []);
+      setUsers(us || []);
+      setRoles(ro || []);
+      setCategories(ca || []);
+      setUnits(un || []);
     } catch (err) {
       console.error("Erro ao sincronizar:", err);
     } finally {
@@ -166,12 +178,36 @@ const App: React.FC = () => {
             {activeTab === 'inventory' && <Inventory products={products} movements={inventoryMovements} sites={constructionSites} onAddMovement={(m) => syncEngine.execute('inventory_movements', 'INSERT', m, () => setInventoryMovements(p => [m, ...p]))} onUpdateProduct={(p) => syncEngine.execute('products', 'UPDATE', p, () => setProducts(prev => prev.map(x => x.id === p.id ? p : x)))} />}
             {activeTab === 'team' && <Team staff={staff} onAddStaff={(s) => syncEngine.execute('staff', 'INSERT', s, () => setStaff(p => [...p, s]))} onUpdateStaff={(s) => syncEngine.execute('staff', 'UPDATE', s, () => setStaff(p => p.map(x => x.id === s.id ? s : x)))} onDeleteStaff={(id) => syncEngine.execute('staff', 'DELETE', {id}, () => setStaff(p => p.filter(x => x.id !== id)))} />}
             {activeTab === 'clients' && <Clients clients={clients} quotes={quotes} appointments={appointments} financials={financials} constructionSites={constructionSites} onAddClient={(c) => syncEngine.execute('clients', 'INSERT', c, () => setClients(p => [...p, c]))} onUpdateClient={(c) => syncEngine.execute('clients', 'UPDATE', c, () => setClients(p => p.map(x => x.id === c.id ? c : x)))} onDeleteClient={(id) => syncEngine.execute('clients', 'DELETE', {id}, () => setClients(p => p.filter(x => x.id !== id)))} />}
-            {/* Fix: Shadowing variable 'p' caused type error in setProducts. Renamed parameter to 'newProd' and state parameter to 'prev'. */}
-            {activeTab === 'products' && <Products products={products} categories={[]} units={[]} onAddProduct={(newProd) => syncEngine.execute('products', 'INSERT', newProd, () => setProducts(prev => [...prev, newProd]))} onUpdateProduct={(p) => syncEngine.execute('products', 'UPDATE', p, () => setProducts(prev => prev.map(x => x.id === p.id ? p : x)))} onDeleteProduct={(id) => syncEngine.execute('products', 'DELETE', {id}, () => setProducts(p => p.filter(x => x.id !== id)))} onAddCategory={()=>{}} onDeleteCategory={()=>{}} onAddUnit={()=>{}} onDeleteUnit={()=>{}} />}
+            {activeTab === 'products' && (
+                <Products 
+                    products={products} 
+                    categories={categories} 
+                    units={units} 
+                    onAddProduct={(newProd) => syncEngine.execute('products', 'INSERT', newProd, () => setProducts(prev => [...prev, newProd]))} 
+                    onUpdateProduct={(p) => syncEngine.execute('products', 'UPDATE', p, () => setProducts(prev => prev.map(x => x.id === p.id ? p : x)))} 
+                    onDeleteProduct={(id) => syncEngine.execute('products', 'DELETE', {id}, () => setProducts(p => p.filter(x => x.id !== id)))} 
+                    onAddCategory={(cat) => syncEngine.execute('product_categories', 'INSERT', cat, () => setCategories(prev => [...prev, cat]))}
+                    onDeleteCategory={(id) => syncEngine.execute('product_categories', 'DELETE', {id}, () => setCategories(prev => prev.filter(x => x.id !== id)))}
+                    onAddUnit={(unit) => syncEngine.execute('product_units', 'INSERT', unit, () => setUnits(prev => [...prev, unit]))}
+                    onDeleteUnit={(id) => syncEngine.execute('product_units', 'DELETE', {id}, () => setUnits(prev => prev.filter(x => x.id !== id)))}
+                />
+            )}
             {activeTab === 'quotes' && <Quotes quotes={quotes} clients={clients} products={products} staff={staff} onAddQuote={(q) => syncEngine.execute('quotes', 'INSERT', q, () => setQuotes(p => [q, ...p]))} onUpdateQuote={(q) => syncEngine.execute('quotes', 'UPDATE', q, () => setQuotes(p => p.map(x => x.id === q.id ? q : x)))} />}
             {activeTab === 'construction_sites' && <ConstructionSites sites={constructionSites} clients={clients} staff={staff} onAddSite={(s) => syncEngine.execute('construction_sites', 'INSERT', s, () => setConstructionSites(p => [...p, s]))} onUpdateSite={(s) => syncEngine.execute('construction_sites', 'UPDATE', s, () => setConstructionSites(p => p.map(x => x.id === s.id ? s : x)))} onDeleteSite={(id) => syncEngine.execute('construction_sites', 'DELETE', {id}, () => setConstructionSites(p => p.filter(x => x.id !== id)))} />}
             {activeTab === 'financials' && <Financials financials={financials} clients={clients} constructionSites={constructionSites} onAddTransaction={(t) => syncEngine.execute('financial_records', 'INSERT', t, () => setFinancials(p => [t, ...p]))} onUpdateTransaction={(t) => syncEngine.execute('financial_records', 'UPDATE', t, () => setFinancials(p => p.map(x => x.id === t.id ? t : x)))} />}
             {activeTab === 'agenda' && <Agenda appointments={appointments} clients={clients} staff={staff} onAddAppointment={(a) => syncEngine.execute('appointments', 'INSERT', a, () => setAppointments(p => [...p, a]))} onUpdateAppointment={(a) => syncEngine.execute('appointments', 'UPDATE', a, () => setAppointments(p => p.map(x => x.id === a.id ? a : x)))} onDeleteAppointment={(id) => syncEngine.execute('appointments', 'DELETE', {id}, () => setAppointments(p => p.filter(x => x.id !== id)))} onCreateQuoteFromAppointment={()=>{}} />}
+            {activeTab === 'access' && (
+                <UserManagement 
+                    users={users} 
+                    roles={roles} 
+                    currentUserRole={currentUser?.role || ''}
+                    onAddUser={(u) => syncEngine.execute('app_users', 'INSERT', u, () => setUsers(prev => [...prev, u]))}
+                    onUpdateUser={(u) => syncEngine.execute('app_users', 'UPDATE', u, () => setUsers(prev => prev.map(x => x.id === u.id ? u : x)))}
+                    onDeleteUser={(id) => syncEngine.execute('app_users', 'DELETE', {id}, () => setUsers(prev => prev.filter(x => x.id !== id)))}
+                    onAddRole={(role) => syncEngine.execute('app_roles', 'INSERT', role, () => setRoles(prev => [...prev, role]))}
+                    onDeleteRole={(id) => syncEngine.execute('app_roles', 'DELETE', {id}, () => setRoles(prev => prev.filter(x => x.id !== id)))}
+                />
+            )}
           </div>
         </main>
       </div>
