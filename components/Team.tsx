@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Staff, TRANSLATIONS } from '../types';
-import { Plus, Edit, Trash2, Phone, Search, Circle, MapPin, Mail } from 'lucide-react';
+import { Plus, Trash2, Phone, Search, Circle, MapPin } from 'lucide-react';
 import { Modal } from './ui/Modal';
 
 interface TeamProps {
@@ -41,7 +41,7 @@ export const Team: React.FC<TeamProps> = ({ staff = [], onAddStaff, onUpdateStaf
         phone: formData.phone || '',
         email: formData.email || '',
         address: formData.address || '',
-        status: formData.status as any || 'available'
+        status: (formData.status as any) || 'available'
       };
       if (editingMember) onUpdateStaff(payload);
       else onAddStaff(payload);
@@ -130,7 +130,7 @@ export const Team: React.FC<TeamProps> = ({ staff = [], onAddStaff, onUpdateStaf
             </div>
             <div>
               <label className="text-[10px] font-black text-gray-500 uppercase ml-2 mb-1 block">Status</label>
-              <select className="w-full p-4 bg-white border border-gray-300 rounded-2xl text-xs font-bold text-gray-800 outline-none" value={formData.status} onChange={e => setFormData({...formData, status: e.target.value as any})}>
+              <select className="w-full p-4 bg-white border border-gray-300 rounded-2xl text-xs font-bold text-gray-800 outline-none" value={formData.status} onChange={e => setFormData({...formData, status: (e.target.value as any)})}>
                 {Object.entries(TRANSLATIONS.staff_status).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select>
             </div>
