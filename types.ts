@@ -1,4 +1,5 @@
 
+
 export interface Client {
   id: string;
   name: string;
@@ -32,17 +33,6 @@ export interface StockMovement {
   siteId?: string; 
 }
 
-export interface ProductCategory {
-  id: string;
-  name: string;
-  type: 'material' | 'service';
-}
-
-export interface ProductUnit {
-  id: string;
-  name: string;
-}
-
 export interface Staff {
   id: string;
   name: string;
@@ -56,8 +46,6 @@ export interface Staff {
 
 export type FinancialStatus = 'paid' | 'pending' | 'overdue';
 export type TransactionType = 'income' | 'expense';
-export type PaymentMethod = 'pix' | 'boleto' | 'credit_card' | 'debit_card' | 'cash' | 'transfer';
-
 export type FinancialCategoryGroup = 
   | 'rev_vendas'      
   | 'cost_obras'      
@@ -77,11 +65,7 @@ export interface FinancialRecord {
   paymentDate?: string;
   clientId?: string;
   quoteId?: string;
-  contractId?: string;
-  installmentNumber?: number;
   categoryGroup: FinancialCategoryGroup;
-  paymentMethod?: PaymentMethod;
-  documentNumber?: string;
   siteId?: string; 
 }
 
@@ -98,6 +82,7 @@ export interface Quote {
   technicalDescription?: string;
 }
 
+// Added AppointmentStatus type for external usage
 export type AppointmentStatus = 'solicited' | 'to_visit' | 'visited' | 'closed_deal' | 'cancelled';
 
 export interface Appointment {
@@ -111,32 +96,47 @@ export interface Appointment {
   status: AppointmentStatus;
 }
 
+// Added ConstructionStatus type for external usage
 export type ConstructionStatus = 'planning' | 'in_progress' | 'completed' | 'paused';
 
 export interface ConstructionSite {
   id: string;
   clientId: string;
+  // Added optional fields used in mock data to satisfy TypeScript
+  sellerId?: string;
+  technicianId?: string;
+  teamIds?: string[];
   address: string;
   startDate: string;
   expectedEndDate?: string;
   status: ConstructionStatus;
   description?: string;
-  sellerId?: string;
-  technicianId?: string;
-  teamIds?: string[];
-  latitude?: string;
-  longitude?: string;
 }
+
+// Added ProductCategory and ProductUnit interfaces
+export interface ProductCategory {
+  id: string;
+  name: string;
+}
+
+export interface ProductUnit {
+  id: string;
+  label: string;
+}
+
+// Added AppRole type
+export type AppRole = 'seller' | 'technician' | 'supervisor' | 'installer' | 'painter' | 'programmer';
 
 export interface AppUser {
   id: string;
   email: string;
   name: string;
-  role: string;
+  role: AppRole;
   allowedTabs: string[];
   allowedCities: string[];
 }
 
+// Added AppNotification interface
 export interface AppNotification {
   id: string;
   title: string;
@@ -145,11 +145,6 @@ export interface AppNotification {
   date: string;
   read: boolean;
   actionTab?: string;
-}
-
-export interface AppRole {
-  id: string;
-  name: string;
 }
 
 export const TRANSLATIONS = {
