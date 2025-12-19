@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
-import { Quote, Client, Product, Staff, TRANSLATIONS } from '../types';
-import { Plus, Trash2, MessageCircle, Mail, Printer, Eye, Share2, FileText, CheckCircle2 } from 'lucide-react';
+import { Quote, Client, Product, Staff, TRANSLATIONS, QuoteStatus } from '../types';
+import { Plus, Trash2, MessageCircle, Mail, Printer, Eye, FileText, CheckCircle2, XCircle, Clock, Send, Download } from 'lucide-react';
 import { Modal } from './ui/Modal';
 
 interface QuotesProps {
@@ -51,6 +51,13 @@ export const Quotes: React.FC<QuotesProps> = ({ quotes = [], clients = [], produ
     setSelectedClient('');
   };
 
+  const updateStatus = (quote: Quote, newStatus: QuoteStatus) => {
+    onUpdateQuote({ ...quote, status: newStatus });
+    if (selectedQuote?.id === quote.id) {
+      setSelectedQuote({ ...quote, status: newStatus });
+    }
+  };
+
   const formatCurrency = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
   const handleShareWhatsApp = (quote: Quote) => {
@@ -62,11 +69,14 @@ export const Quotes: React.FC<QuotesProps> = ({ quotes = [], clients = [], produ
       `Seguem os detalhes do seu orçamento para revestimento cimentício:\n\n` +
       `*MEMORIAL DESCRITIVO:*\n${quote.technicalDescription || 'Conforme projeto executivo.'}\n\n` +
       `*VALOR TOTAL:* ${formatCurrency(quote.total)}\n\n` +
+      `Acesse a proposta detalhada para aprovação.\n` +
       `Ficamos à disposição para agendar o início dos trabalhos!`;
     
     const encoded = encodeURIComponent(text);
     const phone = client.phone.replace(/\D/g, '');
     window.open(`https://wa.me/55${phone}?text=${encoded}`, '_blank');
+    
+    if (quote.status === 'draft') updateStatus(quote, 'sent');
   };
 
   const handleShareEmail = (quote: Quote) => {
@@ -76,8 +86,20 @@ export const Quotes: React.FC<QuotesProps> = ({ quotes = [], clients = [], produ
         return;
     }
     const subject = encodeURIComponent("Proposta VPROM - Revestimentos Cimentícios");
-    const body = encodeURIComponent(`Olá ${client.name},\n\nConforme solicitado, enviamos a proposta técnica no valor de ${formatCurrency(quote.total)}.\n\nDetalhes do serviço:\n${quote.technicalDescription}`);
+    const body = encodeURIComponent(`Olá ${client.name},\n\nConforme solicitado, enviamos a proposta técnica no valor de ${formatCurrency(quote.total)}.\n\nDetalhes do serviço:\n${quote.technicalDescription}\n\nAtenciosamente,\nEquipe VPROM`);
     window.location.href = `mailto:${client.email}?subject=${subject}&body=${body}`;
+    
+    if (quote.status === 'draft') updateStatus(quote, 'sent');
+  };
+
+  const getStatusColor = (status: QuoteStatus) => {
+    switch(status) {
+      case 'approved': return 'bg-green-100 text-green-700 border-green-200';
+      case 'rejected': return 'bg-red-100 text-red-700 border-red-200';
+      case 'in_analysis': return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'sent': return 'bg-orange-100 text-vprom-orange border-orange-200';
+      default: return 'bg-gray-100 text-gray-500 border-gray-200';
+    }
   };
 
   return (
@@ -99,15 +121,15 @@ export const Quotes: React.FC<QuotesProps> = ({ quotes = [], clients = [], produ
             <div key={q.id} className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full border ${q.status === 'approved' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-gray-50 text-gray-400 border-gray-200'}`}>
-                    {TRANSLATIONS.quote_status[q.status as keyof typeof TRANSLATIONS.quote_status] || q.status}
+                  <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full border ${getStatusColor(q.status)}`}>
+                    {TRANSLATIONS.quote_status[q.status] || q.status}
                   </span>
                   <h4 className="text-sm font-black text-vprom-dark uppercase">{client?.name || 'Cliente'}</h4>
                 </div>
                 <p className="text-[10px] text-gray-400 font-bold uppercase">{new Date(q.date).toLocaleDateString()} • {formatCurrency(q.total)}</p>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => { setSelectedQuote(q); setIsViewModalOpen(true); }} className="p-3 bg-gray-50 text-gray-400 rounded-xl hover:text-vprom-dark" title="Ver Proposta"><Eye size={18}/></button>
+                <button onClick={() => { setSelectedQuote(q); setIsViewModalOpen(true); }} className="p-3 bg-gray-50 text-gray-400 rounded-xl hover:text-vprom-dark" title="Ver e Gerenciar Proposta"><Eye size={18}/></button>
                 <button onClick={() => handleShareWhatsApp(q)} className="p-3 bg-green-50 text-green-600 rounded-xl hover:bg-green-600 hover:text-white transition-all" title="WhatsApp"><MessageCircle size={18}/></button>
                 <button onClick={() => handleShareEmail(q)} className="p-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all" title="E-mail"><Mail size={18}/></button>
               </div>
@@ -175,43 +197,134 @@ export const Quotes: React.FC<QuotesProps> = ({ quotes = [], clients = [], produ
 
       <Modal isOpen={isViewModalOpen} onClose={() => setIsViewModalOpen(false)} title="Detalhamento da Proposta">
         {selectedQuote && (
-          <div className="space-y-6 print:p-0">
-            <div className="flex justify-between items-start border-b border-gray-100 pb-6">
-               <div>
-                  <h3 className="font-black text-vprom-dark uppercase text-2xl tracking-tighter">{clients.find(c => c.id === selectedQuote.clientId)?.name}</h3>
-                  <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Cidade: {clients.find(c => c.id === selectedQuote.clientId)?.city}</p>
+          <div className="space-y-6">
+            {/* Controles de Status (Não aparecem na impressão) */}
+            <div className="no-print bg-gray-50 p-4 rounded-2xl flex flex-wrap gap-2 items-center justify-between border border-gray-100">
+               <div className="flex items-center gap-2">
+                 <span className="text-[10px] font-black uppercase text-gray-400">Status:</span>
+                 <span className={`text-[10px] font-black uppercase px-3 py-1 rounded-full border ${getStatusColor(selectedQuote.status)}`}>
+                    {TRANSLATIONS.quote_status[selectedQuote.status]}
+                 </span>
                </div>
-               <div className="text-right">
-                  <p className="text-xs text-gray-400 font-black uppercase">Data de Emissão</p>
-                  <p className="text-sm font-black text-vprom-dark">{new Date(selectedQuote.date).toLocaleDateString()}</p>
-               </div>
-            </div>
-            
-            <div>
-               <h4 className="text-[10px] font-black uppercase text-vprom-orange mb-4 tracking-widest flex items-center gap-2"><FileText size={14}/> Memorial Técnico de Execução</h4>
-               <div className="bg-gray-50 p-8 rounded-[2.5rem] border border-gray-100 text-sm text-gray-700 font-medium leading-relaxed whitespace-pre-wrap shadow-inner">
-                  {selectedQuote.technicalDescription || 'Nenhum memorial técnico cadastrado.'}
+               <div className="flex gap-2">
+                  <button onClick={() => updateStatus(selectedQuote, 'in_analysis')} className="p-2 bg-white text-blue-600 rounded-xl border border-blue-100 hover:bg-blue-600 hover:text-white transition-all" title="Em Análise"><Clock size={16}/></button>
+                  <button onClick={() => updateStatus(selectedQuote, 'approved')} className="p-2 bg-white text-green-600 rounded-xl border border-green-100 hover:bg-green-600 hover:text-white transition-all" title="Aprovar"><CheckCircle2 size={16}/></button>
+                  <button onClick={() => updateStatus(selectedQuote, 'rejected')} className="p-2 bg-white text-red-600 rounded-xl border border-red-100 hover:bg-red-600 hover:text-white transition-all" title="Recusar"><XCircle size={16}/></button>
+                  <button onClick={() => window.print()} className="p-2 bg-vprom-orange text-white rounded-xl shadow-md hover:scale-105 transition-all" title="Imprimir/PDF"><Printer size={16}/></button>
                </div>
             </div>
 
-            <div className="bg-vprom-dark text-white p-8 rounded-[2.5rem] flex justify-between items-center shadow-2xl relative overflow-hidden">
-               <div className="absolute top-0 right-0 p-4 opacity-5"><CheckCircle2 size={100} /></div>
-               <div>
-                  <span className="text-[10px] font-black uppercase opacity-60 tracking-[0.2em] mb-2 block">Investimento Total Estimado</span>
-                  <span className="text-4xl font-black text-vprom-orange">{formatCurrency(selectedQuote.total)}</span>
+            {/* ÁREA DE IMPRESSÃO (Papel Timbrado Profissional) */}
+            <div className="print:block bg-white p-8 rounded-[2rem] border-2 border-gray-50 shadow-sm print:border-0 print:shadow-none print:p-0">
+               {/* Cabeçalho Proposta */}
+               <div className="flex justify-between items-start mb-10 border-b-2 border-vprom-orange pb-8">
+                  <div>
+                    <h1 className="text-4xl font-black text-vprom-dark tracking-tighter">VPROM</h1>
+                    <p className="text-[10px] font-bold text-vprom-orange uppercase tracking-[0.2em]">Revestimentos Cimentícios</p>
+                  </div>
+                  <div className="text-right">
+                    <h2 className="text-xl font-black text-vprom-dark uppercase">Proposta Técnica</h2>
+                    <p className="text-xs text-gray-400 font-bold uppercase">Nº {selectedQuote.id.slice(-6)}</p>
+                    <p className="text-xs text-gray-400 font-bold uppercase">{new Date(selectedQuote.date).toLocaleDateString()}</p>
+                  </div>
                </div>
-               <div className="no-print">
-                   <button onClick={() => window.print()} className="bg-vprom-orange text-white p-4 rounded-2xl hover:bg-white hover:text-vprom-dark transition-all"><Printer size={24}/></button>
+
+               {/* Dados do Cliente */}
+               <div className="grid grid-cols-2 gap-8 mb-10">
+                  <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100">
+                    <h3 className="text-[10px] font-black uppercase text-vprom-orange mb-3">Dados do Cliente</h3>
+                    <p className="text-sm font-black text-vprom-dark uppercase">{clients.find(c => c.id === selectedQuote.clientId)?.name}</p>
+                    <p className="text-xs text-gray-600 mt-1">{clients.find(c => c.id === selectedQuote.clientId)?.address}</p>
+                    <p className="text-xs text-gray-600">{clients.find(c => c.id === selectedQuote.clientId)?.city} - {clients.find(c => c.id === selectedQuote.clientId)?.state}</p>
+                  </div>
+                  <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100">
+                    <h3 className="text-[10px] font-black uppercase text-vprom-orange mb-3">Informações de Contato</h3>
+                    <p className="text-xs text-gray-600 font-bold">Fone: {clients.find(c => c.id === selectedQuote.clientId)?.phone}</p>
+                    <p className="text-xs text-gray-600 font-bold">Email: {clients.find(c => c.id === selectedQuote.clientId)?.email || 'Não informado'}</p>
+                  </div>
+               </div>
+
+               {/* Itens do Orçamento */}
+               <div className="mb-10">
+                  <h3 className="text-[10px] font-black uppercase text-vprom-orange mb-4 px-2">Itens Inclusos na Proposta</h3>
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="border-b-2 border-gray-100">
+                        <th className="py-4 text-[10px] font-black uppercase text-gray-400">Descrição</th>
+                        <th className="py-4 text-[10px] font-black uppercase text-gray-400 text-center">Qtd</th>
+                        <th className="py-4 text-[10px] font-black uppercase text-gray-400 text-right">Unitário</th>
+                        <th className="py-4 text-[10px] font-black uppercase text-gray-400 text-right">Subtotal</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {selectedQuote.items.map((item, i) => {
+                        const prod = products.find(p => p.id === item.productId);
+                        return (
+                          <tr key={i}>
+                            <td className="py-4">
+                              <p className="text-sm font-bold text-vprom-dark uppercase">{prod?.name}</p>
+                              <p className="text-[8px] text-gray-400 font-black uppercase">{prod?.category}</p>
+                            </td>
+                            <td className="py-4 text-center text-sm font-black text-vprom-dark">{item.quantity} {prod?.unit}</td>
+                            <td className="py-4 text-right text-sm text-gray-600">{formatCurrency(item.unitPrice)}</td>
+                            <td className="py-4 text-right text-sm font-black text-vprom-dark">{formatCurrency(item.quantity * item.unitPrice)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot>
+                       <tr className="bg-vprom-dark text-white">
+                         <td colSpan={3} className="p-6 rounded-l-[1.5rem] font-black uppercase text-xs">Total Estimado do Investimento</td>
+                         <td className="p-6 text-right rounded-r-[1.5rem] font-black text-2xl text-vprom-orange">{formatCurrency(selectedQuote.total)}</td>
+                       </tr>
+                    </tfoot>
+                  </table>
+               </div>
+
+               {/* Memorial Descritivo */}
+               <div className="mb-16">
+                  <h3 className="text-[10px] font-black uppercase text-vprom-orange mb-4 px-2">Memorial Técnico e Observações</h3>
+                  <div className="p-8 bg-gray-50 rounded-[2rem] border border-gray-100 text-sm text-gray-700 leading-relaxed whitespace-pre-wrap font-medium shadow-inner">
+                    {selectedQuote.technicalDescription || 'Serviços de instalação conforme normas técnicas vigentes e manual do fabricante.'}
+                  </div>
+               </div>
+
+               {/* ASSINATURAS (Visíveis apenas na impressão/PDF) */}
+               <div className="grid grid-cols-2 gap-20 pt-10 border-t border-gray-100">
+                  <div className="text-center">
+                    <div className="border-b-2 border-gray-300 mb-2 h-12 flex items-end justify-center">
+                      <p className="text-[8px] text-gray-400 italic mb-2">Assinado digitalmente em {new Date().toLocaleDateString()}</p>
+                    </div>
+                    <p className="text-[10px] font-black uppercase text-vprom-dark">Responsável Técnico VPROM</p>
+                    <p className="text-[8px] text-gray-400 font-bold uppercase">CONTRATADA</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="border-b-2 border-gray-300 mb-2 h-12"></div>
+                    <p className="text-[10px] font-black uppercase text-vprom-dark">{clients.find(c => c.id === selectedQuote.clientId)?.name}</p>
+                    <p className="text-[8px] text-gray-400 font-bold uppercase">CONTRATANTE / CLIENTE</p>
+                  </div>
                </div>
             </div>
 
-            <div className="flex gap-3 pt-6 border-t border-gray-100 no-print">
+            {/* Ações Rápidas (WhatsApp/Email) */}
+            <div className="no-print flex gap-3">
                <button onClick={() => handleShareWhatsApp(selectedQuote)} className="flex-1 flex items-center justify-center gap-3 bg-green-500 text-white py-5 rounded-[2rem] text-xs font-black uppercase shadow-lg shadow-green-100 active:scale-95 transition-all"><MessageCircle size={18}/> Enviar via WhatsApp</button>
                <button onClick={() => handleShareEmail(selectedQuote)} className="flex-1 flex items-center justify-center gap-3 bg-vprom-dark text-white py-5 rounded-[2rem] text-xs font-black uppercase shadow-lg shadow-gray-100 active:scale-95 transition-all"><Mail size={18}/> Enviar por E-mail</button>
             </div>
           </div>
         )}
       </Modal>
+      
+      <style>{`
+        @media print {
+          body * { visibility: hidden; }
+          .no-print { display: none !important; }
+          .print-area, .print-area * { visibility: visible; }
+          .print-area { position: absolute; left: 0; top: 0; width: 100%; }
+          .Modal { background: white !important; padding: 0 !important; }
+          .print\\:block { display: block !important; }
+        }
+      `}</style>
     </div>
   );
 };
