@@ -49,15 +49,20 @@ export const Inventory: React.FC<InventoryProps> = ({ products = [], movements =
       siteId: formData.siteId || undefined
     };
 
+    // 1. Registra a movimentação
     onAddMovement(newMovement);
 
-    const updatedProduct = { ...selectedProduct };
-    const stockChange = movementType === 'in' ? formData.quantity : -formData.quantity;
-    updatedProduct.currentStock = (updatedProduct.currentStock || 0) + stockChange;
+    // 2. Calcula e atualiza o saldo do produto (Garante que usamos o valor atual ou 0)
+    const updatedProduct = { 
+      ...selectedProduct,
+      currentStock: Number(selectedProduct.currentStock || 0) + (movementType === 'in' ? formData.quantity : -formData.quantity)
+    };
+    
     onUpdateProduct(updatedProduct);
 
     setIsModalOpen(false);
     setFormData({ quantity: 0, reason: '', siteId: '' });
+    setSelectedProduct(null);
   };
 
   return (
@@ -89,7 +94,9 @@ export const Inventory: React.FC<InventoryProps> = ({ products = [], movements =
 
           <div className="grid grid-cols-1 gap-3">
             {filteredMaterials.map(product => {
-              const isLowStock = (product.currentStock || 0) <= (product.minStock || 5);
+              const currentBalance = Number(product.currentStock || 0);
+              const minBalance = Number(product.minStock || 5);
+              const isLowStock = currentBalance <= minBalance;
               return (
                 <div key={product.id} className="bg-white p-5 rounded-[2.5rem] border border-gray-100 shadow-sm">
                   <div className="flex justify-between items-center mb-5">
@@ -104,8 +111,9 @@ export const Inventory: React.FC<InventoryProps> = ({ products = [], movements =
                     </div>
                     <div className="text-right">
                       <p className={`text-2xl font-black tracking-tighter ${isLowStock ? 'text-red-500' : 'text-vprom-dark'}`}>
-                        {product.currentStock || 0} <span className="text-xs uppercase opacity-50">{product.unit}</span>
+                        {currentBalance} <span className="text-xs uppercase opacity-50">{product.unit}</span>
                       </p>
+                      {isLowStock && <span className="text-[8px] font-black text-red-400 uppercase tracking-widest">Estoque Baixo!</span>}
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -169,6 +177,7 @@ export const Inventory: React.FC<InventoryProps> = ({ products = [], movements =
                 <input 
                   required 
                   type="number" 
+                  min="1"
                   className="w-full p-4 bg-white border border-gray-300 rounded-2xl text-2xl font-black text-vprom-dark outline-none focus:ring-2 focus:ring-vprom-orange/20" 
                   value={formData.quantity || ''} 
                   onChange={e => setFormData({...formData, quantity: Number(e.target.value)})}
