@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Menu, LogOut, ShieldCheck, RefreshCw, AlertCircle } from 'lucide-react';
+import { Menu, LogOut, ShieldCheck, RefreshCw, AlertCircle, Bell } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { syncEngine } from './lib/syncEngine';
 import { Dashboard } from './components/Dashboard';
@@ -13,16 +13,20 @@ import { Team } from './components/Team';
 import { ConstructionSites } from './components/ConstructionSites';
 import { Inventory } from './components/Inventory';
 import { Login } from './components/Login';
-import { Client, Product, FinancialRecord, Quote, Appointment, Staff, ConstructionSite, StockMovement, AppUser, ALL_TABS } from './types';
+import { NotificationsPanel } from './components/NotificationsPanel';
+import { Client, Product, FinancialRecord, Quote, Appointment, Staff, ConstructionSite, StockMovement, AppUser, AppNotification, ALL_TABS } from './types';
 
 const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  
+  // Notificações internas
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
 
   // App Data
   const [clients, setClients] = useState<Client[]>([]);
@@ -58,6 +62,18 @@ const App: React.FC = () => {
     }
   };
 
+  const addInternalNotification = (title: string, message: string, type: AppNotification['type'] = 'info') => {
+    const newNotif: AppNotification = {
+      id: Date.now().toString(),
+      title,
+      message,
+      type,
+      date: new Date().toISOString(),
+      read: false
+    };
+    setNotifications(prev => [newNotif, ...prev]);
+  };
+
   const refreshAllData = async () => {
     setIsSyncing(true);
     try {
@@ -81,8 +97,7 @@ const App: React.FC = () => {
       setConstructionSites(cs || []);
       setInventoryMovements(im || []);
     } catch (err) {
-      console.error("Erro ao sincronizar dados:", err);
-      setError("Falha na conexão com o servidor. Verifique sua internet.");
+      console.error("Erro ao sincronizar:", err);
     } finally {
       setIsSyncing(false);
     }
@@ -91,43 +106,19 @@ const App: React.FC = () => {
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
-      
-      // Limpeza agressiva de cache e tokens
       localStorage.clear();
       setSession(null);
       setCurrentUser(null);
-      
-      // Redirecionamento forçado para limpar memória da página
       window.location.replace('/'); 
     } catch (err) {
-      console.error("Erro ao sair:", err);
       window.location.reload();
     }
   };
 
-  const setupAlerts = useCallback(async () => {
-    if (!("Notification" in window)) {
-      alert("Seu navegador não suporta notificações.");
-      return;
-    }
-
-    const permission = await Notification.requestPermission();
-    if (permission === "granted") {
-      new Notification("VPROM", { 
-        body: "Alertas Críticos Ativados!",
-        icon: "/favicon.ico"
-      });
-    } else {
-      alert("Para receber alertas, você precisa autorizar as notificações nas configurações do navegador/celular.");
-    }
-  }, []);
-
   useEffect(() => {
     const initAuth = async () => {
       try {
-        const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError) throw sessionError;
-        
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
         setSession(currentSession);
         if (currentSession?.user?.email) {
           await fetchUserProfile(currentSession.user.email);
@@ -160,7 +151,7 @@ const App: React.FC = () => {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-vprom-dark text-white font-black uppercase tracking-widest gap-4">
         <RefreshCw className="animate-spin text-vprom-orange" size={32} />
-        <span>Iniciando VPROM...</span>
+        <span>VPROM Siding System...</span>
       </div>
     );
   }
@@ -170,6 +161,8 @@ const App: React.FC = () => {
   const navItems = ALL_TABS.filter(tab => 
     currentUser?.role === 'programmer' || currentUser?.allowedTabs?.includes(tab.id)
   );
+
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
@@ -202,6 +195,30 @@ const App: React.FC = () => {
               <button onClick={refreshAllData} disabled={isSyncing} className={`p-3 rounded-xl transition-all ${isSyncing ? 'bg-orange-50 text-vprom-orange' : 'bg-gray-50 text-gray-400'}`}>
                 <RefreshCw size={20} className={isSyncing ? 'animate-spin' : ''} />
               </button>
+              
+              <div className="relative">
+                <button 
+                  onClick={() => setIsNotifOpen(!isNotifOpen)}
+                  className={`p-3 rounded-xl transition-all bg-gray-50 hover:bg-gray-100 relative ${unreadCount > 0 ? 'text-vprom-orange' : 'text-gray-400'}`}
+                >
+                  <Bell size={20} />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-2 right-2 w-4 h-4 bg-red-500 text-white text-[8px] font-black flex items-center justify-center rounded-full ring-2 ring-white">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+                <NotificationsPanel 
+                  notifications={notifications}
+                  isOpen={isNotifOpen}
+                  onClose={() => setIsNotifOpen(false)}
+                  onMarkRead={(id) => setNotifications(prev => prev.map(n => n.id === id ? {...n, read: true} : n))}
+                  onDelete={(id) => setNotifications(prev => prev.filter(n => n.id !== id))}
+                  onClearAll={() => setNotifications([])}
+                  onNavigate={setActiveTab}
+                />
+              </div>
+
               <div className="h-10 w-10 rounded-full bg-vprom-orange/10 flex items-center justify-center text-vprom-orange">
                 <ShieldCheck size={20} />
               </div>
@@ -210,15 +227,15 @@ const App: React.FC = () => {
 
         <main className="flex-1 overflow-y-auto p-4 md:p-10 bg-[#f8f9fb]">
           <div className="max-w-7xl mx-auto">
-            {activeTab === 'dashboard' && <Dashboard financials={financials} clients={clients} appointments={appointments} constructionSites={constructionSites} onNavigate={setActiveTab} onSetupAlerts={setupAlerts} />}
-            {activeTab === 'inventory' && <Inventory products={products} movements={inventoryMovements} sites={constructionSites} onAddMovement={(m) => syncEngine.execute('inventory_movements', 'INSERT', m, () => setInventoryMovements(prev => [m, ...prev]))} onUpdateProduct={(p) => syncEngine.execute('products', 'UPDATE', p, () => setProducts(prev => prev.map(pr => pr.id === p.id ? p : pr)))} />}
+            {activeTab === 'dashboard' && <Dashboard financials={financials} clients={clients} appointments={appointments} constructionSites={constructionSites} onNavigate={setActiveTab} />}
+            {activeTab === 'inventory' && <Inventory products={products} movements={inventoryMovements} sites={constructionSites} onAddMovement={(m) => { syncEngine.execute('inventory_movements', 'INSERT', m, () => setInventoryMovements(prev => [m, ...prev])); addInternalNotification('Estoque Atualizado', `Nova movimentação registrada: ${m.type === 'in' ? 'Entrada' : 'Saída'}`, 'success'); }} onUpdateProduct={(p) => syncEngine.execute('products', 'UPDATE', p, () => setProducts(prev => prev.map(pr => pr.id === p.id ? p : pr)))} />}
             {activeTab === 'team' && <Team staff={staff} onAddStaff={(s) => syncEngine.execute('staff', 'INSERT', s, () => setStaff(prev => [...prev, s]))} onUpdateStaff={(s) => syncEngine.execute('staff', 'UPDATE', s, () => setStaff(prev => prev.map(st => st.id === s.id ? s : st)))} onDeleteStaff={(id) => syncEngine.execute('staff', 'DELETE', {id}, () => setStaff(prev => prev.filter(s => s.id !== id)))} />}
             {activeTab === 'clients' && <Clients clients={clients} quotes={quotes} appointments={appointments} financials={financials} constructionSites={constructionSites} onAddClient={(c) => syncEngine.execute('clients', 'INSERT', c, () => setClients(prev => [...prev, c]))} onUpdateClient={(c) => syncEngine.execute('clients', 'UPDATE', c, () => setClients(prev => prev.map(cl => cl.id === c.id ? c : cl)))} onDeleteClient={(id) => syncEngine.execute('clients', 'DELETE', {id}, () => setClients(prev => prev.filter(cl => cl.id !== id)))} />}
             {activeTab === 'products' && <Products products={products} categories={[]} units={[]} onAddProduct={(p) => syncEngine.execute('products', 'INSERT', p, () => setProducts(prev => [...prev, p]))} onUpdateProduct={(p) => syncEngine.execute('products', 'UPDATE', p, () => setProducts(prev => prev.map(pr => pr.id === p.id ? p : pr)))} onDeleteProduct={(id) => syncEngine.execute('products', 'DELETE', {id}, () => setProducts(prev => prev.filter(p => p.id !== id)))} onAddCategory={()=>{}} onDeleteCategory={()=>{}} onAddUnit={()=>{}} onDeleteUnit={()=>{}} />}
-            {activeTab === 'quotes' && <Quotes quotes={quotes} clients={clients} products={products} staff={staff} onAddQuote={(q) => syncEngine.execute('quotes', 'INSERT', q, () => setQuotes(prev => [q, ...prev]))} onUpdateQuote={(q) => syncEngine.execute('quotes', 'UPDATE', q, () => setQuotes(prev => prev.map(qu => qu.id === q.id ? q : qu)))} />}
+            {activeTab === 'quotes' && <Quotes quotes={quotes} clients={clients} products={products} staff={staff} onAddQuote={(q) => { syncEngine.execute('quotes', 'INSERT', q, () => setQuotes(prev => [q, ...prev])); addInternalNotification('Novo Orçamento', `Orçamento para ${clients.find(c => c.id === q.clientId)?.name} gerado.`, 'info'); }} onUpdateQuote={(q) => syncEngine.execute('quotes', 'UPDATE', q, () => setQuotes(prev => prev.map(qu => qu.id === q.id ? q : qu)))} />}
             {activeTab === 'construction_sites' && <ConstructionSites sites={constructionSites} clients={clients} staff={staff} onAddSite={(s) => syncEngine.execute('construction_sites', 'INSERT', s, () => setConstructionSites(prev => [...prev, s]))} onUpdateSite={(s) => syncEngine.execute('construction_sites', 'UPDATE', s, () => setConstructionSites(prev => prev.map(st => st.id === s.id ? s : st)))} onDeleteSite={(id) => syncEngine.execute('construction_sites', 'DELETE', {id}, () => setConstructionSites(prev => prev.filter(s => s.id !== id)))} />}
             {activeTab === 'financials' && <Financials financials={financials} clients={clients} constructionSites={constructionSites} onAddTransaction={(t) => syncEngine.execute('financial_records', 'INSERT', t, () => setFinancials(prev => [t, ...prev]))} onUpdateTransaction={(t) => syncEngine.execute('financial_records', 'UPDATE', t, () => setFinancials(prev => prev.map(f => f.id === t.id ? t : f)))} />}
-            {activeTab === 'agenda' && <Agenda appointments={appointments} clients={clients} staff={staff} onAddAppointment={(a) => syncEngine.execute('appointments', 'INSERT', a, () => setAppointments(prev => [...prev, a]))} onUpdateAppointment={(a) => syncEngine.execute('appointments', 'UPDATE', a, () => setAppointments(prev => prev.map(ap => ap.id === a.id ? a : ap)))} onDeleteAppointment={(id) => syncEngine.execute('appointments', 'DELETE', {id}, () => setAppointments(prev => prev.filter(a => a.id !== id)))} onCreateQuoteFromAppointment={()=>{}} />}
+            {activeTab === 'agenda' && <Agenda appointments={appointments} clients={clients} staff={staff} onAddAppointment={(a) => { syncEngine.execute('appointments', 'INSERT', a, () => setAppointments(prev => [...prev, a])); addInternalNotification('Agendamento', `Nova visita para ${clients.find(c => c.id === a.clientId)?.name}`, 'info'); }} onUpdateAppointment={(a) => syncEngine.execute('appointments', 'UPDATE', a, () => setAppointments(prev => prev.map(ap => ap.id === a.id ? a : ap)))} onDeleteAppointment={(id) => syncEngine.execute('appointments', 'DELETE', {id}, () => setAppointments(prev => prev.filter(a => a.id !== id)))} onCreateQuoteFromAppointment={()=>{}} />}
           </div>
         </main>
       </div>
