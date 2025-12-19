@@ -9,15 +9,18 @@ const mapToSupabase = (table: string, data: any) => {
   if (!data) return data;
   const mapped = { ...data };
 
-  // Remove campos undefined para evitar erros no Supabase
+  // Limpa campos vazios ou undefined
   Object.keys(mapped).forEach(key => {
-    if (mapped[key] === undefined) delete mapped[key];
+    if (mapped[key] === undefined || mapped[key] === null) delete mapped[key];
   });
 
-  // Mapeamentos específicos por tabela
+  // Mapeamentos CamelCase -> snake_case
   if (table === 'financial_records') {
     if ('dueDate' in mapped) { mapped.due_date = mapped.dueDate; delete mapped.dueDate; }
     if ('categoryGroup' in mapped) { mapped.category_group = mapped.categoryGroup; delete mapped.categoryGroup; }
+    if ('clientId' in mapped) { mapped.client_id = mapped.clientId; delete mapped.clientId; }
+    if ('siteId' in mapped) { mapped.site_id = mapped.siteId; delete mapped.siteId; }
+    if ('quoteId' in mapped) { mapped.quote_id = mapped.quoteId; delete mapped.quoteId; }
   }
   
   if (table === 'quotes') {
@@ -27,7 +30,7 @@ const mapToSupabase = (table: string, data: any) => {
   }
 
   if (table === 'construction_sites') {
-    if ('clientId' in mapped) { mapped.client_id = mapped.clientId; delete mapped.client_id; }
+    if ('clientId' in mapped) { mapped.client_id = mapped.clientId; delete mapped.clientId; }
     if ('startDate' in mapped) { mapped.start_date = mapped.startDate; delete mapped.startDate; }
     if ('expectedEndDate' in mapped) { mapped.expected_end_date = mapped.expectedEndDate; delete mapped.expectedEndDate; }
   }
@@ -52,13 +55,15 @@ const mapFromSupabase = (table: string, data: any) => {
   if (table === 'financial_records') {
     if ('due_date' in mapped) { mapped.dueDate = mapped.due_date; delete mapped.due_date; }
     if ('category_group' in mapped) { mapped.categoryGroup = mapped.category_group; delete mapped.category_group; }
+    if ('client_id' in mapped) { mapped.clientId = mapped.client_id; delete mapped.client_id; }
+    if ('site_id' in mapped) { mapped.siteId = mapped.site_id; delete mapped.site_id; }
+    if ('quote_id' in mapped) { mapped.quoteId = mapped.quote_id; delete mapped.quote_id; }
   }
 
   if (table === 'quotes') {
     if ('client_id' in mapped) { mapped.clientId = mapped.client_id; delete mapped.client_id; }
     if ('staff_id' in mapped) { mapped.staffId = mapped.staff_id; delete mapped.staff_id; }
     if ('technical_description' in mapped) { mapped.technicalDescription = mapped.technical_description; delete mapped.technical_description; }
-    if (!mapped.items) mapped.items = [];
   }
 
   if (table === 'construction_sites') {
