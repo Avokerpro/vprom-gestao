@@ -2,15 +2,15 @@
 import { GoogleGenAI } from "@google/genai";
 import { Product } from "../types";
 
-// Always use process.env.API_KEY directly for initialization.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 /**
  * Generates a technical description for a quote based on the client and selected items.
  */
 export const generateQuoteDescription = async (clientName: string, items: { product: Product; qty: number }[]): Promise<string> => {
-  // Use gemini-3-flash-preview for basic text tasks like technical description generation.
-  // Updated to use correct product type property instead of category for label.
+  // Always use process.env.API_KEY directly for initialization.
+  // We initialize it inside the function to ensure the app doesn't crash at startup
+  // if the key is provided asynchronously by the environment.
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
   const itemsList = items.map(i => `- ${i.qty}x ${i.product.name} (${i.product.type === 'service' ? 'Serviço' : 'Material'})`).join('\n');
 
   const prompt = `
