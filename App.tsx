@@ -90,32 +90,43 @@ const App: React.FC = () => {
 
   const handleLogout = async () => {
     try {
+      // Limpa a sessão no Supabase
       await supabase.auth.signOut();
+      
+      // Limpa os tokens do localStorage explicitamente
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.includes('supabase.auth.token') || key.includes('vprom_'))) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(k => localStorage.removeItem(k));
+
+      // Limpa o estado e força recarregamento total
       setSession(null);
       setCurrentUser(null);
-      // Forçar recarregamento se necessário para limpar memória
-      window.location.reload();
+      window.location.replace('/'); // replace para evitar voltar no histórico
     } catch (err) {
       console.error("Erro ao sair:", err);
-      // Fallback manual de estado
-      setSession(null);
-      setCurrentUser(null);
+      window.location.reload();
     }
   };
 
   const setupAlerts = useCallback(async () => {
     if (!("Notification" in window)) {
-      alert("Este navegador não suporta notificações de desktop.");
+      alert("Seu navegador não suporta notificações.");
       return;
     }
 
-    if (Notification.permission === "granted") {
-      new Notification("VPROM", { body: "Notificações já estão ativas!" });
+    const permission = await Notification.requestPermission();
+    if (permission === "granted") {
+      new Notification("VPROM", { 
+        body: "Alertas Críticos Ativados!",
+        icon: "/favicon.ico"
+      });
     } else {
-      const permission = await Notification.requestPermission();
-      if (permission === "granted") {
-        new Notification("VPROM", { body: "Alertas ativados com sucesso!" });
-      }
+      alert("Para receber alertas, você precisa autorizar as notificações nas configurações do navegador/celular.");
     }
   }, []);
 
@@ -132,17 +143,17 @@ const App: React.FC = () => {
           setAuthLoading(false);
         }
       } catch (err) {
-        console.error("Erro na autenticação inicial:", err);
         setAuthLoading(false);
       }
     };
 
     initAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
       setSession(newSession);
-      if (newSession?.user?.email) fetchUserProfile(newSession.user.email);
-      else {
+      if (newSession?.user?.email) {
+        fetchUserProfile(newSession.user.email);
+      } else if (event === 'SIGNED_OUT') {
         setCurrentUser(null);
         setAuthLoading(false);
       }
@@ -156,17 +167,6 @@ const App: React.FC = () => {
       <div className="flex h-screen flex-col items-center justify-center bg-vprom-dark text-white font-black uppercase tracking-widest gap-4">
         <RefreshCw className="animate-spin text-vprom-orange" size={32} />
         <span>Iniciando VPROM...</span>
-      </div>
-    );
-  }
-
-  if (error && !session) {
-    return (
-      <div className="flex h-screen flex-col items-center justify-center bg-gray-50 p-6 text-center">
-        <AlertCircle className="text-red-500 mb-4" size={48} />
-        <h2 className="text-xl font-bold mb-2">Erro de Inicialização</h2>
-        <p className="text-gray-600 mb-6">{error}</p>
-        <button onClick={() => window.location.reload()} className="bg-vprom-dark text-white px-8 py-3 rounded-xl font-bold">Tentar Novamente</button>
       </div>
     );
   }
@@ -222,6 +222,7 @@ const App: React.FC = () => {
             {activeTab === 'clients' && <Clients clients={clients} quotes={quotes} appointments={appointments} financials={financials} constructionSites={constructionSites} onAddClient={(c) => syncEngine.execute('clients', 'INSERT', c, () => setClients(prev => [...prev, c]))} onUpdateClient={(c) => syncEngine.execute('clients', 'UPDATE', c, () => setClients(prev => prev.map(cl => cl.id === c.id ? c : cl)))} onDeleteClient={(id) => syncEngine.execute('clients', 'DELETE', {id}, () => setClients(prev => prev.filter(cl => cl.id !== id)))} />}
             {activeTab === 'products' && <Products products={products} categories={[]} units={[]} onAddProduct={(p) => syncEngine.execute('products', 'INSERT', p, () => setProducts(prev => [...prev, p]))} onUpdateProduct={(p) => syncEngine.execute('products', 'UPDATE', p, () => setProducts(prev => prev.map(pr => pr.id === p.id ? p : pr)))} onDeleteProduct={(id) => syncEngine.execute('products', 'DELETE', {id}, () => setProducts(prev => prev.filter(p => p.id !== id)))} onAddCategory={()=>{}} onDeleteCategory={()=>{}} onAddUnit={()=>{}} onDeleteUnit={()=>{}} />}
             {activeTab === 'quotes' && <Quotes quotes={quotes} clients={clients} products={products} staff={staff} onAddQuote={(q) => syncEngine.execute('quotes', 'INSERT', q, () => setQuotes(prev => [q, ...prev]))} onUpdateQuote={(q) => syncEngine.execute('quotes', 'UPDATE', q, () => setQuotes(prev => prev.map(qu => qu.id === q.id ? q : qu)))} />}
+            {/* Fixed incorrect nested setConstructionSites call in onDeleteSite handler */}
             {activeTab === 'construction_sites' && <ConstructionSites sites={constructionSites} clients={clients} staff={staff} onAddSite={(s) => syncEngine.execute('construction_sites', 'INSERT', s, () => setConstructionSites(prev => [...prev, s]))} onUpdateSite={(s) => syncEngine.execute('construction_sites', 'UPDATE', s, () => setConstructionSites(prev => prev.map(st => st.id === s.id ? s : st)))} onDeleteSite={(id) => syncEngine.execute('construction_sites', 'DELETE', {id}, () => setConstructionSites(prev => prev.filter(s => s.id !== id)))} />}
             {activeTab === 'financials' && <Financials financials={financials} clients={clients} constructionSites={constructionSites} onAddTransaction={(t) => syncEngine.execute('financial_records', 'INSERT', t, () => setFinancials(prev => [t, ...prev]))} onUpdateTransaction={(t) => syncEngine.execute('financial_records', 'UPDATE', t, () => setFinancials(prev => prev.map(f => f.id === t.id ? t : f)))} />}
             {activeTab === 'agenda' && <Agenda appointments={appointments} clients={clients} staff={staff} onAddAppointment={(a) => syncEngine.execute('appointments', 'INSERT', a, () => setAppointments(prev => [...prev, a]))} onUpdateAppointment={(a) => syncEngine.execute('appointments', 'UPDATE', a, () => setAppointments(prev => prev.map(ap => ap.id === a.id ? a : ap)))} onCreateQuoteFromAppointment={()=>{}} />}
