@@ -39,6 +39,16 @@ const mapToSupabase = (table: string, data: any) => {
     if ('clientId' in mapped) mapped.client_id = mapped.clientId;
     if ('staffId' in mapped) mapped.staff_id = mapped.staffId;
     if ('technicalDescription' in mapped) mapped.technical_description = mapped.technicalDescription;
+    
+    // Mapeia itens internos do orçamento para snake_case
+    if (Array.isArray(mapped.items)) {
+      mapped.items = mapped.items.map((item: any) => ({
+        product_id: item.productId || item.product_id,
+        quantity: item.quantity,
+        unit_price: item.unitPrice || item.unit_price
+      }));
+    }
+
     delete mapped.clientId;
     delete mapped.staffId;
     delete mapped.technicalDescription;
@@ -71,10 +81,17 @@ const mapToSupabase = (table: string, data: any) => {
     delete mapped.siteId;
   }
 
+  if (table === 'app_users') {
+    if ('allowedTabs' in mapped) mapped.allowed_tabs = mapped.allowedTabs;
+    if ('allowedCities' in mapped) mapped.allowed_cities = mapped.allowedCities;
+    delete mapped.allowedTabs;
+    delete mapped.allowedCities;
+  }
+
   return mapped;
 };
 
-const mapFromSupabase = (table: string, data: any) => {
+export const mapFromSupabase = (table: string, data: any) => {
   if (!data) return data;
   const mapped = { ...data };
 
@@ -102,6 +119,18 @@ const mapFromSupabase = (table: string, data: any) => {
     mapped.clientId = mapped.client_id;
     mapped.staffId = mapped.staff_id;
     mapped.technicalDescription = mapped.technical_description;
+    
+    // Mapeia itens internos do orçamento de volta para CamelCase
+    if (Array.isArray(mapped.items)) {
+      mapped.items = mapped.items.map((item: any) => ({
+        productId: item.product_id || item.productId,
+        quantity: item.quantity,
+        unitPrice: item.unit_price || item.unitPrice
+      }));
+    } else {
+      mapped.items = [];
+    }
+    
     delete mapped.client_id;
     delete mapped.staff_id;
     delete mapped.technical_description;
@@ -132,6 +161,13 @@ const mapFromSupabase = (table: string, data: any) => {
     mapped.siteId = mapped.site_id;
     delete mapped.product_id;
     delete mapped.site_id;
+  }
+
+  if (table === 'app_users') {
+    mapped.allowedTabs = Array.isArray(mapped.allowed_tabs) ? mapped.allowed_tabs : [];
+    mapped.allowedCities = Array.isArray(mapped.allowed_cities) ? mapped.allowed_cities : [];
+    delete mapped.allowed_tabs;
+    delete mapped.allowed_cities;
   }
 
   return mapped;
@@ -178,15 +214,21 @@ export const syncEngine = {
           if (error) throw error;
         }
         else if (type === 'UPDATE') {
-          const { error } = await supabase.from(table).update(dbPayload).eq('id', payload.id);
+          // Removemos o ID do payload de atualização para evitar erros de restrição de PK no Postgres
+          const updatePayload = { ...dbPayload };
+          delete updatePayload.id;
+          
+          const { error } = await supabase.from(table).update(updatePayload).eq('id', payload.id);
           if (error) throw error;
         }
         else if (type === 'DELETE') {
           const { error } = await supabase.from(table).delete().eq('id', payload.id);
           if (error) throw error;
         }
-      } catch (e) {
-        console.error(`Sync execute error [${table} ${type}]:`, e);
+      } catch (e: any) {
+        // Melhora o log de erro para ser mais legível que "[object Object]"
+        console.error(`Sync execute error [${table} ${type}]:`, e.message || e);
+        if (e.details) console.error("Details:", e.details);
       }
     }
   }
