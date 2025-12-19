@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Appointment, Client, AppointmentStatus, Staff, TRANSLATIONS } from '../types';
-import { Plus, Calendar, Clock, MapPin, CheckCircle, Search, User, XCircle } from 'lucide-react';
+import { Plus, Calendar, Clock, MapPin, CheckCircle, Search, User, XCircle, Edit, Trash2 } from 'lucide-react';
 import { Modal } from './ui/Modal';
 
 interface AgendaProps {
@@ -10,16 +10,18 @@ interface AgendaProps {
   staff: Staff[];
   onAddAppointment: (appt: Appointment) => void;
   onUpdateAppointment: (appt: Appointment) => void;
+  onDeleteAppointment: (id: string) => void;
   onCreateQuoteFromAppointment: (clientId: string) => void;
 }
 
 export const Agenda: React.FC<AgendaProps> = ({ 
   appointments, clients, staff,
-  onAddAppointment, onUpdateAppointment
+  onAddAppointment, onUpdateAppointment, onDeleteAppointment
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [editingAppt, setEditingAppt] = useState<Appointment | null>(null);
   const [formData, setFormData] = useState<Partial<Appointment>>({ status: 'solicited', date: new Date().toISOString().split('T')[0] });
 
   const filteredAppointments = useMemo(() => {
@@ -31,11 +33,22 @@ export const Agenda: React.FC<AgendaProps> = ({
     });
   }, [appointments, clients, searchTerm, statusFilter]);
 
+  const handleOpenModal = (appt?: Appointment) => {
+    if (appt) {
+      setEditingAppt(appt);
+      setFormData(appt);
+    } else {
+      setEditingAppt(null);
+      setFormData({ status: 'solicited', date: new Date().toISOString().split('T')[0] });
+    }
+    setIsModalOpen(true);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.clientId && formData.date && formData.time) {
-      onAddAppointment({
-        id: Date.now().toString(),
+      const payload: Appointment = {
+        id: editingAppt ? editingAppt.id : Date.now().toString(),
         clientId: formData.clientId!,
         staffId: formData.staffId,
         date: formData.date!,
@@ -43,7 +56,13 @@ export const Agenda: React.FC<AgendaProps> = ({
         address: formData.address || '',
         description: formData.description || '',
         status: formData.status as AppointmentStatus || 'solicited'
-      });
+      };
+      
+      if (editingAppt) {
+        onUpdateAppointment(payload);
+      } else {
+        onAddAppointment(payload);
+      }
       setIsModalOpen(false);
     }
   };
@@ -52,7 +71,7 @@ export const Agenda: React.FC<AgendaProps> = ({
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-3xl font-black text-vprom-dark tracking-tighter">Agenda</h2>
-        <button onClick={() => setIsModalOpen(true)} className="bg-vprom-orange text-white px-6 py-4 rounded-2xl shadow-xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all">
+        <button onClick={() => handleOpenModal()} className="bg-vprom-orange text-white px-6 py-4 rounded-2xl shadow-xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all">
           <Plus size={20} /> Agendar Visita
         </button>
       </div>
@@ -78,28 +97,30 @@ export const Agenda: React.FC<AgendaProps> = ({
         {filteredAppointments.map(appt => {
           const client = clients.find(c => c.id === appt.clientId);
           return (
-            <div key={appt.id} className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div key={appt.id} className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 group">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <span className="bg-vprom-orange/10 text-vprom-orange text-[8px] font-black uppercase px-2 py-0.5 rounded-full border border-vprom-orange/20">{TRANSLATIONS.appointment_status[appt.status]}</span>
+                    <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full border ${appt.status === 'visited' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-vprom-orange/10 text-vprom-orange border-vprom-orange/20'}`}>
+                        {TRANSLATIONS.appointment_status[appt.status]}
+                    </span>
                     <h3 className="text-sm font-black text-vprom-dark uppercase">{client?.name}</h3>
                   </div>
                   <div className="flex flex-wrap gap-4 text-[10px] text-gray-500 font-bold uppercase">
                     <div className="flex items-center gap-1.5"><Calendar size={14}/>{new Date(appt.date).toLocaleDateString()}</div>
                     <div className="flex items-center gap-1.5"><Clock size={14}/>{appt.time}</div>
-                    <div className="flex items-center gap-1.5"><MapPin size={14}/>{appt.address}</div>
+                    <div className="flex items-center gap-1.5 text-vprom-dark"><MapPin size={14} className="text-vprom-orange"/>{appt.address}</div>
                   </div>
                 </div>
                 <div className="flex gap-2 w-full md:w-auto">
-                  <button onClick={() => onUpdateAppointment({...appt, status: 'visited'})} className="flex-1 md:flex-none p-3 bg-gray-50 text-vprom-dark rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-vprom-orange hover:text-white transition-all">Concluir</button>
-                  <button onClick={() => onUpdateAppointment({...appt, status: 'cancelled'})} className="p-3 bg-red-50 text-red-500 rounded-2xl transition-all"><XCircle size={18} /></button>
+                  <button onClick={() => handleOpenModal(appt)} className="p-3 bg-gray-50 text-gray-400 rounded-2xl hover:bg-vprom-dark hover:text-white transition-all"><Edit size={18}/></button>
+                  <button onClick={() => onDeleteAppointment(appt.id)} className="p-3 bg-red-50 text-red-500 rounded-2xl hover:bg-red-500 hover:text-white transition-all"><Trash2 size={18} /></button>
                 </div>
             </div>
           );
         })}
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Agendar Nova Visita">
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingAppt ? "Editar Agendamento" : "Nova Visita Técnica"}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="text-[10px] font-black text-gray-500 uppercase ml-2 mb-2 block">Cliente</label>
@@ -112,9 +133,26 @@ export const Agenda: React.FC<AgendaProps> = ({
             <div><label className="text-[10px] font-black text-gray-500 uppercase ml-2 mb-2 block">Data</label><input required type="date" className="w-full p-4 bg-white border border-gray-300 rounded-2xl text-sm text-gray-900 font-bold outline-none" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} /></div>
             <div><label className="text-[10px] font-black text-gray-500 uppercase ml-2 mb-2 block">Hora</label><input required type="time" className="w-full p-4 bg-white border border-gray-300 rounded-2xl text-sm text-gray-900 font-bold outline-none" value={formData.time} onChange={e => setFormData({...formData, time: e.target.value})} /></div>
           </div>
+          <div className="grid grid-cols-2 gap-4">
+             <div>
+                <label className="text-[10px] font-black text-gray-500 uppercase ml-2 mb-2 block">Técnico Responsável</label>
+                <select className="w-full p-4 bg-white border border-gray-300 rounded-2xl text-sm font-bold text-gray-900 outline-none" value={formData.staffId || ''} onChange={e => setFormData({...formData, staffId: e.target.value})}>
+                    <option value="">Nenhum</option>
+                    {staff.filter(s => s.role === 'technician' || s.role === 'supervisor').map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+             </div>
+             <div>
+                <label className="text-[10px] font-black text-gray-500 uppercase ml-2 mb-2 block">Status da Visita</label>
+                <select className="w-full p-4 bg-white border border-gray-300 rounded-2xl text-sm font-bold text-gray-900 outline-none" value={formData.status} onChange={e => setFormData({...formData, status: e.target.value as any})}>
+                  {Object.entries(TRANSLATIONS.appointment_status).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+             </div>
+          </div>
           <div><label className="text-[10px] font-black text-gray-500 uppercase ml-2 mb-2 block">Local / Obra</label><input required className="w-full p-4 bg-white border border-gray-300 rounded-2xl text-sm text-gray-900 font-bold outline-none" value={formData.address || ''} onChange={e => setFormData({...formData, address: e.target.value})} /></div>
-          <div><label className="text-[10px] font-black text-gray-500 uppercase ml-2 mb-2 block">Observações</label><textarea className="w-full p-4 bg-white border border-gray-300 rounded-2xl text-sm text-gray-900 font-bold outline-none" rows={3} value={formData.description || ''} onChange={e => setFormData({...formData, description: e.target.value})} /></div>
-          <button type="submit" className="w-full bg-vprom-orange text-white py-5 rounded-[2rem] font-black uppercase tracking-widest text-xs shadow-xl active:scale-95 transition-all mt-4">Confirmar Agendamento</button>
+          <div><label className="text-[10px] font-black text-gray-500 uppercase ml-2 mb-2 block">Observações Técnicas</label><textarea className="w-full p-4 bg-white border border-gray-300 rounded-2xl text-sm text-gray-900 font-bold outline-none" rows={3} value={formData.description || ''} onChange={e => setFormData({...formData, description: e.target.value})} /></div>
+          <button type="submit" className="w-full bg-vprom-dark text-white py-5 rounded-[2rem] font-black uppercase tracking-widest text-xs shadow-xl active:scale-95 transition-all mt-4">
+            {editingAppt ? 'Salvar Alterações' : 'Confirmar Agendamento'}
+          </button>
         </form>
       </Modal>
     </div>
