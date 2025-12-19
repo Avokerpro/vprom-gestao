@@ -15,6 +15,11 @@ const mapToSupabase = (table: string, data: any) => {
   });
 
   // Mapeamentos CamelCase -> snake_case
+  if (table === 'products') {
+    if ('currentStock' in mapped) { mapped.current_stock = mapped.currentStock; delete mapped.currentStock; }
+    if ('minStock' in mapped) { mapped.min_stock = mapped.minStock; delete mapped.minStock; }
+  }
+
   if (table === 'financial_records') {
     if ('dueDate' in mapped) { mapped.due_date = mapped.dueDate; delete mapped.dueDate; }
     if ('categoryGroup' in mapped) { mapped.category_group = mapped.categoryGroup; delete mapped.categoryGroup; }
@@ -51,6 +56,11 @@ const mapToSupabase = (table: string, data: any) => {
 const mapFromSupabase = (table: string, data: any) => {
   if (!data) return data;
   const mapped = { ...data };
+
+  if (table === 'products') {
+    if ('current_stock' in mapped) { mapped.currentStock = mapped.current_stock; delete mapped.current_stock; }
+    if ('min_stock' in mapped) { mapped.minStock = mapped.min_stock; delete mapped.min_stock; }
+  }
 
   if (table === 'financial_records') {
     if ('due_date' in mapped) { mapped.dueDate = mapped.due_date; delete mapped.due_date; }
