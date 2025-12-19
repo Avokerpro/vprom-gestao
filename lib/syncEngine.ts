@@ -31,8 +31,8 @@ const mapToSupabase = (table: string, data: any) => {
     delete mapped.dueDate;
     delete mapped.categoryGroup;
     delete mapped.clientId;
-    delete mapped.siteId;
-    delete mapped.quoteId;
+    delete mapped.site_id;
+    delete mapped.quote_id;
   }
   
   if (table === 'quotes') {
@@ -40,14 +40,10 @@ const mapToSupabase = (table: string, data: any) => {
     if ('staffId' in mapped) mapped.staff_id = mapped.staffId;
     if ('technicalDescription' in mapped) mapped.technical_description = mapped.technicalDescription;
     
-    // Mapeia itens internos do orçamento para snake_case
-    if (Array.isArray(mapped.items)) {
-      mapped.items = mapped.items.map((item: any) => ({
-        product_id: item.productId || item.product_id,
-        quantity: item.quantity,
-        unit_price: item.unitPrice || item.unit_price
-      }));
-    }
+    // REMOÇÃO CRÍTICA: A coluna 'items' não existe no Supabase.
+    // Para evitar o erro "Could not find the 'items' column", removemos do payload do DB.
+    // Os itens ainda serão salvos no LocalStorage através do saveLocal do syncEngine.
+    delete mapped.items;
 
     delete mapped.clientId;
     delete mapped.staffId;
@@ -120,15 +116,17 @@ export const mapFromSupabase = (table: string, data: any) => {
     mapped.staffId = mapped.staff_id;
     mapped.technicalDescription = mapped.technical_description;
     
-    // Mapeia itens internos do orçamento de volta para CamelCase
-    if (Array.isArray(mapped.items)) {
+    // Se vier do banco sem itens (o que é esperado agora), garante array vazio
+    // para não quebrar o .map() na UI. Os itens reais virão do merge com LocalStorage
+    // se o app estiver configurado para persistência híbrida.
+    if (!mapped.items) {
+       mapped.items = [];
+    } else if (Array.isArray(mapped.items)) {
       mapped.items = mapped.items.map((item: any) => ({
         productId: item.product_id || item.productId,
         quantity: item.quantity,
         unitPrice: item.unit_price || item.unitPrice
       }));
-    } else {
-      mapped.items = [];
     }
     
     delete mapped.client_id;
@@ -194,9 +192,25 @@ export const syncEngine = {
       if (error) throw error;
       
       const safeData = Array.isArray(data) ? data : [];
-      const formatted = safeData.map(item => mapFromSupabase(table, item));
-      syncEngine.saveLocal(table, formatted);
-      return formatted;
+      const formattedFromDB = safeData.map(item => mapFromSupabase(table, item));
+      
+      // Merge inteligente: No caso de quotes, como o DB não tem 'items', 
+      // tentamos preservar os 'items' que já existem localmente para aquele ID.
+      if (table === 'quotes') {
+        const localQuotes = syncEngine.getLocal<any>('quotes');
+        const merged = formattedFromDB.map(dbQuote => {
+          const localMatch = localQuotes.find(l => l.id === dbQuote.id);
+          return {
+            ...dbQuote,
+            items: localMatch?.items || dbQuote.items || []
+          };
+        });
+        syncEngine.saveLocal(table, merged);
+        return merged;
+      }
+
+      syncEngine.saveLocal(table, formattedFromDB);
+      return formattedFromDB;
     } catch (e) {
       console.error(`Sync pull error [${table}]:`, e);
       return syncEngine.getLocal(table);
@@ -204,7 +218,17 @@ export const syncEngine = {
   },
 
   execute: async (table: string, type: 'INSERT' | 'UPDATE' | 'DELETE', payload: any, localUpdate: () => void) => {
+    // Atualiza o estado local imediatamente para responsividade da UI
     localUpdate();
+    
+    // Salva no LocalStorage para persistência offline e merge futuro
+    const currentLocal = syncEngine.getLocal<any>(table);
+    let updatedLocal = [...currentLocal];
+    if (type === 'INSERT') updatedLocal = [payload, ...updatedLocal];
+    else if (type === 'UPDATE') updatedLocal = updatedLocal.map(x => x.id === payload.id ? payload : x);
+    else if (type === 'DELETE') updatedLocal = updatedLocal.filter(x => x.id !== payload.id);
+    syncEngine.saveLocal(table, updatedLocal);
+
     const dbPayload = mapToSupabase(table, payload);
     
     if (navigator.onLine) {
@@ -214,7 +238,6 @@ export const syncEngine = {
           if (error) throw error;
         }
         else if (type === 'UPDATE') {
-          // Removemos o ID do payload de atualização para evitar erros de restrição de PK no Postgres
           const updatePayload = { ...dbPayload };
           delete updatePayload.id;
           
@@ -226,7 +249,6 @@ export const syncEngine = {
           if (error) throw error;
         }
       } catch (e: any) {
-        // Melhora o log de erro para ser mais legível que "[object Object]"
         console.error(`Sync execute error [${table} ${type}]:`, e.message || e);
         if (e.details) console.error("Details:", e.details);
       }
