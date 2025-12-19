@@ -103,10 +103,10 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                   <h4 className="text-sm font-black text-vprom-dark uppercase tracking-tight">{user.name}</h4>
                   <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">{user.role} • {user.email}</p>
                   <div className="flex gap-1 mt-2">
-                    {user.allowedTabs.slice(0,3).map(tab => (
+                    {(user.allowedTabs || []).slice(0,3).map(tab => (
                         <span key={tab} className="text-[6px] font-black uppercase px-1.5 py-0.5 bg-gray-100 text-gray-400 rounded-full">{tab}</span>
                     ))}
-                    {user.allowedTabs.length > 3 && <span className="text-[6px] font-black uppercase px-1.5 py-0.5 bg-vprom-orange/10 text-vprom-orange rounded-full">+{user.allowedTabs.length - 3}</span>}
+                    {(user.allowedTabs || []).length > 3 && <span className="text-[6px] font-black uppercase px-1.5 py-0.5 bg-vprom-orange/10 text-vprom-orange rounded-full">+{(user.allowedTabs || []).length - 3}</span>}
                   </div>
                </div>
             </div>
