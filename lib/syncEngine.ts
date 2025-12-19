@@ -16,38 +16,59 @@ const mapToSupabase = (table: string, data: any) => {
 
   // Mapeamentos CamelCase -> snake_case
   if (table === 'products') {
-    if ('currentStock' in mapped) { mapped.current_stock = Number(mapped.currentStock); delete mapped.currentStock; }
-    if ('minStock' in mapped) { mapped.min_stock = Number(mapped.minStock); delete mapped.minStock; }
+    if ('currentStock' in mapped) mapped.current_stock = Number(mapped.currentStock);
+    if ('minStock' in mapped) mapped.min_stock = Number(mapped.minStock);
+    delete mapped.currentStock;
+    delete mapped.minStock;
   }
 
   if (table === 'financial_records') {
-    if ('dueDate' in mapped) { mapped.due_date = mapped.dueDate; delete mapped.dueDate; }
-    if ('categoryGroup' in mapped) { mapped.category_group = mapped.categoryGroup; delete mapped.categoryGroup; }
-    if ('clientId' in mapped) { mapped.client_id = mapped.clientId; delete mapped.clientId; }
-    if ('siteId' in mapped) { mapped.site_id = mapped.siteId; delete mapped.siteId; }
-    if ('quoteId' in mapped) { mapped.quote_id = mapped.quoteId; delete mapped.quoteId; }
+    if ('dueDate' in mapped) mapped.due_date = mapped.dueDate;
+    if ('categoryGroup' in mapped) mapped.category_group = mapped.categoryGroup;
+    if ('clientId' in mapped) mapped.client_id = mapped.clientId;
+    if ('siteId' in mapped) mapped.site_id = mapped.siteId;
+    if ('quoteId' in mapped) mapped.quote_id = mapped.quoteId;
+    delete mapped.dueDate;
+    delete mapped.categoryGroup;
+    delete mapped.clientId;
+    delete mapped.siteId;
+    delete mapped.quoteId;
   }
   
   if (table === 'quotes') {
-    if ('clientId' in mapped) { mapped.client_id = mapped.clientId; delete mapped.clientId; }
-    if ('staffId' in mapped) { mapped.staff_id = mapped.staffId; delete mapped.staffId; }
-    if ('technicalDescription' in mapped) { mapped.technical_description = mapped.technicalDescription; delete mapped.technicalDescription; }
+    if ('clientId' in mapped) mapped.client_id = mapped.clientId;
+    if ('staffId' in mapped) mapped.staff_id = mapped.staffId;
+    if ('technicalDescription' in mapped) mapped.technical_description = mapped.technicalDescription;
+    delete mapped.clientId;
+    delete mapped.staffId;
+    delete mapped.technicalDescription;
   }
 
   if (table === 'construction_sites') {
-    if ('clientId' in mapped) { mapped.client_id = mapped.clientId; delete mapped.clientId; }
-    if ('startDate' in mapped) { mapped.start_date = mapped.startDate; delete mapped.startDate; }
-    if ('expectedEndDate' in mapped) { mapped.expected_end_date = mapped.expectedEndDate; delete mapped.expectedEndDate; }
+    if ('clientId' in mapped) mapped.client_id = mapped.clientId;
+    if ('startDate' in mapped) mapped.start_date = mapped.startDate;
+    if ('expectedEndDate' in mapped) mapped.expected_end_date = mapped.expectedEndDate;
+    if ('sellerId' in mapped) mapped.seller_id = mapped.sellerId;
+    if ('technicianId' in mapped) mapped.technician_id = mapped.technicianId;
+    delete mapped.clientId;
+    delete mapped.startDate;
+    delete mapped.expectedEndDate;
+    delete mapped.sellerId;
+    delete mapped.technicianId;
   }
 
   if (table === 'appointments') {
-    if ('clientId' in mapped) { mapped.client_id = mapped.clientId; delete mapped.clientId; }
-    if ('staffId' in mapped) { mapped.staff_id = mapped.staffId; delete mapped.staffId; }
+    if ('clientId' in mapped) mapped.client_id = mapped.clientId;
+    if ('staffId' in mapped) mapped.staff_id = mapped.staffId;
+    delete mapped.clientId;
+    delete mapped.staffId;
   }
 
   if (table === 'inventory_movements') {
-    if ('productId' in mapped) { mapped.product_id = mapped.productId; delete mapped.productId; }
-    if ('siteId' in mapped) { mapped.site_id = mapped.siteId; delete mapped.siteId; }
+    if ('productId' in mapped) mapped.product_id = mapped.productId;
+    if ('siteId' in mapped) mapped.site_id = mapped.siteId;
+    delete mapped.productId;
+    delete mapped.siteId;
   }
 
   return mapped;
@@ -58,38 +79,59 @@ const mapFromSupabase = (table: string, data: any) => {
   const mapped = { ...data };
 
   if (table === 'products') {
-    if ('current_stock' in mapped) { mapped.currentStock = Number(mapped.current_stock); delete mapped.current_stock; }
-    if ('min_stock' in mapped) { mapped.minStock = Number(mapped.min_stock); delete mapped.min_stock; }
+    mapped.currentStock = Number(mapped.current_stock || 0);
+    mapped.minStock = Number(mapped.min_stock || 0);
+    delete mapped.current_stock;
+    delete mapped.min_stock;
   }
 
   if (table === 'financial_records') {
-    if ('due_date' in mapped) { mapped.dueDate = mapped.due_date; delete mapped.due_date; }
-    if ('category_group' in mapped) { mapped.categoryGroup = mapped.category_group; delete mapped.category_group; }
-    if ('client_id' in mapped) { mapped.clientId = mapped.client_id; delete mapped.client_id; }
-    if ('site_id' in mapped) { mapped.siteId = mapped.site_id; delete mapped.site_id; }
-    if ('quote_id' in mapped) { mapped.quoteId = mapped.quote_id; delete mapped.quote_id; }
+    mapped.dueDate = mapped.due_date;
+    mapped.categoryGroup = mapped.category_group;
+    mapped.clientId = mapped.client_id;
+    mapped.siteId = mapped.site_id;
+    mapped.quoteId = mapped.quote_id;
+    delete mapped.due_date;
+    delete mapped.category_group;
+    delete mapped.client_id;
+    delete mapped.site_id;
+    delete mapped.quote_id;
   }
 
   if (table === 'quotes') {
-    if ('client_id' in mapped) { mapped.clientId = mapped.client_id; delete mapped.client_id; }
-    if ('staff_id' in mapped) { mapped.staffId = mapped.staff_id; delete mapped.staff_id; }
-    if ('technical_description' in mapped) { mapped.technicalDescription = mapped.technical_description; delete mapped.technical_description; }
+    mapped.clientId = mapped.client_id;
+    mapped.staffId = mapped.staff_id;
+    mapped.technicalDescription = mapped.technical_description;
+    delete mapped.client_id;
+    delete mapped.staff_id;
+    delete mapped.technical_description;
   }
 
   if (table === 'construction_sites') {
-    if ('client_id' in mapped) { mapped.clientId = mapped.client_id; delete mapped.client_id; }
-    if ('start_date' in mapped) { mapped.startDate = mapped.start_date; delete mapped.start_date; }
-    if ('expected_end_date' in mapped) { mapped.expectedEndDate = mapped.expected_end_date; delete mapped.expected_end_date; }
+    mapped.clientId = mapped.client_id;
+    mapped.startDate = mapped.start_date;
+    mapped.expectedEndDate = mapped.expected_end_date;
+    mapped.sellerId = mapped.seller_id;
+    mapped.technicianId = mapped.technician_id;
+    delete mapped.client_id;
+    delete mapped.start_date;
+    delete mapped.expected_end_date;
+    delete mapped.seller_id;
+    delete mapped.technician_id;
   }
 
   if (table === 'appointments') {
-    if ('client_id' in mapped) { mapped.clientId = mapped.client_id; delete mapped.client_id; }
-    if ('staff_id' in mapped) { mapped.staffId = mapped.staff_id; delete mapped.staff_id; }
+    mapped.clientId = mapped.client_id;
+    mapped.staffId = mapped.staff_id;
+    delete mapped.client_id;
+    delete mapped.staff_id;
   }
 
   if (table === 'inventory_movements') {
-    if ('product_id' in mapped) { mapped.productId = mapped.product_id; delete mapped.product_id; }
-    if ('site_id' in mapped) { mapped.siteId = mapped.site_id; delete mapped.site_id; }
+    mapped.productId = mapped.product_id;
+    mapped.siteId = mapped.site_id;
+    delete mapped.product_id;
+    delete mapped.site_id;
   }
 
   return mapped;
@@ -113,13 +155,14 @@ export const syncEngine = {
     if (!navigator.onLine) return syncEngine.getLocal(table);
     try {
       const { data, error } = await supabase.from(table).select('*');
-      if (error) return syncEngine.getLocal(table);
+      if (error) throw error;
       
       const safeData = Array.isArray(data) ? data : [];
       const formatted = safeData.map(item => mapFromSupabase(table, item));
       syncEngine.saveLocal(table, formatted);
       return formatted;
     } catch (e) {
+      console.error(`Sync pull error [${table}]:`, e);
       return syncEngine.getLocal(table);
     }
   },
@@ -143,7 +186,7 @@ export const syncEngine = {
           if (error) throw error;
         }
       } catch (e) {
-        console.error(`Erro na sincronização remota da tabela ${table}:`, e);
+        console.error(`Sync execute error [${table} ${type}]:`, e);
       }
     }
   }
