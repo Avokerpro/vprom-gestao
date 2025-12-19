@@ -2,7 +2,6 @@
 import { supabase } from './supabase';
 
 const STORAGE_KEYS = {
-  QUEUE: 'vprom_sync_queue',
   DATA_PREFIX: 'vprom_data_'
 };
 
@@ -16,27 +15,17 @@ const mapToSupabase = (table: string, data: any) => {
 
   if (table === 'financial_records') {
     if ('dueDate' in mapped) { mapped.due_date = mapped.dueDate; delete mapped.dueDate; }
-    if ('paymentDate' in mapped) { mapped.payment_date = mapped.paymentDate; delete mapped.paymentDate; }
-    if ('clientId' in mapped) { mapped.client_id = mapped.clientId; delete mapped.clientId; }
     if ('categoryGroup' in mapped) { mapped.category_group = mapped.categoryGroup; delete mapped.categoryGroup; }
-    if ('siteId' in mapped) { mapped.site_id = mapped.siteId; delete mapped.siteId; }
   }
   
   if (table === 'quotes') {
     if ('clientId' in mapped) { mapped.client_id = mapped.clientId; delete mapped.clientId; }
-    if ('staffId' in mapped) { mapped.staff_id = mapped.staffId; delete mapped.staffId; }
     if ('technicalDescription' in mapped) { mapped.technical_description = mapped.technicalDescription; delete mapped.technicalDescription; }
-  }
-
-  if (table === 'inventory_movements') {
-    if ('productId' in mapped) { mapped.product_id = mapped.productId; delete mapped.productId; }
-    if ('siteId' in mapped) { mapped.site_id = mapped.siteId; delete mapped.siteId; }
   }
 
   if (table === 'construction_sites') {
     if ('clientId' in mapped) { mapped.client_id = mapped.clientId; delete mapped.client_id; }
     if ('startDate' in mapped) { mapped.start_date = mapped.startDate; delete mapped.startDate; }
-    if ('expectedEndDate' in mapped) { mapped.expected_end_date = mapped.expectedEndDate; delete mapped.expectedEndDate; }
   }
 
   return mapped;
@@ -48,10 +37,7 @@ const mapFromSupabase = (table: string, data: any) => {
 
   if (table === 'financial_records') {
     if ('due_date' in mapped) { mapped.dueDate = mapped.due_date; delete mapped.due_date; }
-    if ('payment_date' in mapped) { mapped.paymentDate = mapped.payment_date; delete mapped.payment_date; }
-    if ('client_id' in mapped) { mapped.clientId = mapped.client_id; delete mapped.client_id; }
     if ('category_group' in mapped) { mapped.categoryGroup = mapped.category_group; delete mapped.category_group; }
-    if ('site_id' in mapped) { mapped.siteId = mapped.site_id; delete mapped.site_id; }
   }
 
   if (table === 'quotes') {
@@ -60,15 +46,9 @@ const mapFromSupabase = (table: string, data: any) => {
     if (!mapped.items) mapped.items = [];
   }
 
-  if (table === 'inventory_movements') {
-    if ('product_id' in mapped) { mapped.productId = mapped.product_id; delete mapped.product_id; }
-    if ('site_id' in mapped) { mapped.siteId = mapped.site_id; delete mapped.site_id; }
-  }
-
   if (table === 'construction_sites') {
     if ('client_id' in mapped) { mapped.clientId = mapped.client_id; delete mapped.client_id; }
     if ('start_date' in mapped) { mapped.startDate = mapped.start_date; delete mapped.start_date; }
-    if ('expected_end_date' in mapped) { mapped.expectedEndDate = mapped.expected_end_date; delete mapped.expected_end_date; }
   }
 
   return mapped;
