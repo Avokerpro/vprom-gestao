@@ -15,13 +15,14 @@ export const MOCK_STAFF: Staff[] = [
   { id: '4', name: 'Marcos Instalador', role: 'technician', phone: '(11) 92222-1111', email: 'marcos@vprom.com', status: 'available' },
 ];
 
+// Fix: Added currentStock and minStock to MOCK_PRODUCTS to satisfy Product interface requirements
 export const MOCK_PRODUCTS: Product[] = [
-  { id: '1', name: 'Chapa Cimentícia 8mm', category: 'Chapas', type: 'material', unit: 'un', price: 120.00, cost: 75.00 },
-  { id: '2', name: 'Chapa Cimentícia 10mm', category: 'Chapas', type: 'material', unit: 'un', price: 150.00, cost: 95.00 },
-  { id: '3', name: 'Parafuso Ponta Broca', category: 'Fixação', type: 'material', unit: 'cx', price: 45.90, cost: 25.00 },
-  { id: '4', name: 'Mão de Obra (Instalação)', category: 'Mão de Obra', type: 'service', unit: 'm²', price: 80.00, cost: 40.00 },
-  { id: '5', name: 'Pintura Acabamento', category: 'Acabamento', type: 'service', unit: 'm²', price: 40.00, cost: 15.00 },
-  { id: '6', name: 'Impermeabilizante', category: 'Impermeabilização', type: 'material', unit: 'gl', price: 210.00, cost: 140.00 },
+  { id: '1', name: 'Chapa Cimentícia 8mm', category: 'Chapas', type: 'material', unit: 'un', price: 120.00, cost: 75.00, currentStock: 50, minStock: 10 },
+  { id: '2', name: 'Chapa Cimentícia 10mm', category: 'Chapas', type: 'material', unit: 'un', price: 150.00, cost: 95.00, currentStock: 30, minStock: 10 },
+  { id: '3', name: 'Parafuso Ponta Broca', category: 'Fixação', type: 'material', unit: 'cx', price: 45.90, cost: 25.00, currentStock: 100, minStock: 20 },
+  { id: '4', name: 'Mão de Obra (Instalação)', category: 'Mão de Obra', type: 'service', unit: 'm²', price: 80.00, cost: 40.00, currentStock: 0, minStock: 0 },
+  { id: '5', name: 'Pintura Acabamento', category: 'Acabamento', type: 'service', unit: 'm²', price: 40.00, cost: 15.00, currentStock: 0, minStock: 0 },
+  { id: '6', name: 'Impermeabilizante', category: 'Impermeabilização', type: 'material', unit: 'gl', price: 210.00, cost: 140.00, currentStock: 15, minStock: 5 },
 ];
 
 export const MOCK_FINANCIALS: FinancialRecord[] = [
