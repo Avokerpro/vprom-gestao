@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Menu, LogOut, ShieldCheck, RefreshCw, AlertCircle, Bell } from 'lucide-react';
+import { Menu, LogOut, ShieldCheck, RefreshCw, Bell } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { syncEngine } from './lib/syncEngine';
 import { Dashboard } from './components/Dashboard';
@@ -12,7 +12,7 @@ import { Agenda } from './components/Agenda';
 import { Team } from './components/Team';
 import { ConstructionSites } from './components/ConstructionSites';
 import { Inventory } from './components/Inventory';
-import { Login } from './components/Login';
+import Login from './components/Login';
 import { NotificationsPanel } from './components/NotificationsPanel';
 import { Client, Product, FinancialRecord, Quote, Appointment, Staff, ConstructionSite, StockMovement, AppUser, AppNotification, ALL_TABS } from './types';
 
@@ -24,7 +24,7 @@ const App: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   
-  // Notificações internas (apenas em memória durante o uso)
+  // Notificações internas
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
 
@@ -105,20 +105,13 @@ const App: React.FC = () => {
 
   const handleLogout = async () => {
     try {
-      // 1. Sign out do Supabase (limpa cookies de sessão remota)
       await supabase.auth.signOut();
-      
-      // 2. Limpa TUDO do storage local
       localStorage.clear();
       sessionStorage.clear();
-      
-      // 3. Reseta estados locais
       setSession(null);
       setCurrentUser(null);
       setNotifications([]);
-      
-      // 4. Força um redirecionamento limpo para o root, removendo qualquer rastro de memória
-      window.location.href = window.location.origin;
+      window.location.replace('/'); 
     } catch (err) {
       console.error("Erro ao sair:", err);
       window.location.reload();
@@ -146,11 +139,10 @@ const App: React.FC = () => {
       if (event === 'SIGNED_OUT') {
         setSession(null);
         setCurrentUser(null);
-      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        setAuthLoading(false);
+      } else if (newSession?.user?.email) {
         setSession(newSession);
-        if (newSession?.user?.email) {
-          fetchUserProfile(newSession.user.email);
-        }
+        fetchUserProfile(newSession.user.email);
       }
     });
 
