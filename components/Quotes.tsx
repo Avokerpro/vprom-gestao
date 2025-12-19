@@ -117,6 +117,7 @@ export const Quotes: React.FC<QuotesProps> = ({ quotes = [], clients = [], produ
       <div className="space-y-4">
         {quotes.map(q => {
           const client = clients.find(c => c.id === q.clientId);
+          const itemCount = Array.isArray(q.items) ? q.items.length : 0;
           return (
             <div key={q.id} className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div className="flex-1">
@@ -126,12 +127,15 @@ export const Quotes: React.FC<QuotesProps> = ({ quotes = [], clients = [], produ
                   </span>
                   <h4 className="text-sm font-black text-vprom-dark uppercase">{client?.name || 'Cliente'}</h4>
                 </div>
-                <p className="text-[10px] text-gray-400 font-bold uppercase">{new Date(q.date).toLocaleDateString()} • {formatCurrency(q.total)}</p>
+                <p className="text-[10px] text-gray-400 font-bold uppercase">{new Date(q.date).toLocaleDateString()} • {itemCount} {itemCount === 1 ? 'ITEM' : 'ITENS'}</p>
               </div>
-              <div className="flex gap-2">
-                <button onClick={() => { setSelectedQuote(q); setIsViewModalOpen(true); }} className="p-3 bg-gray-50 text-gray-400 rounded-xl hover:text-vprom-dark" title="Ver e Gerenciar Proposta"><Eye size={18}/></button>
-                <button onClick={() => handleShareWhatsApp(q)} className="p-3 bg-green-50 text-green-600 rounded-xl hover:bg-green-600 hover:text-white transition-all" title="WhatsApp"><MessageCircle size={18}/></button>
-                <button onClick={() => handleShareEmail(q)} className="p-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all" title="E-mail"><Mail size={18}/></button>
+              <div className="flex items-center gap-6">
+                <p className="text-lg font-black text-vprom-orange">{formatCurrency(q.total)}</p>
+                <div className="flex gap-2">
+                    <button onClick={() => { setSelectedQuote(q); setIsViewModalOpen(true); }} className="p-3 bg-gray-50 text-gray-400 rounded-xl hover:text-vprom-dark" title="Ver e Gerenciar Proposta"><Eye size={18}/></button>
+                    <button onClick={() => handleShareWhatsApp(q)} className="p-3 bg-green-50 text-green-600 rounded-xl hover:bg-green-600 hover:text-white transition-all" title="WhatsApp"><MessageCircle size={18}/></button>
+                    <button onClick={() => handleShareEmail(q)} className="p-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all" title="E-mail"><Mail size={18}/></button>
+                </div>
               </div>
             </div>
           )
@@ -197,7 +201,7 @@ export const Quotes: React.FC<QuotesProps> = ({ quotes = [], clients = [], produ
 
       <Modal isOpen={isViewModalOpen} onClose={() => setIsViewModalOpen(false)} title="Detalhamento da Proposta">
         {selectedQuote && (
-          <div className="space-y-6">
+          <div className="space-y-6 print-container">
             {/* Controles de Status (Não aparecem na impressão) */}
             <div className="no-print bg-gray-50 p-4 rounded-2xl flex flex-wrap gap-2 items-center justify-between border border-gray-100">
                <div className="flex items-center gap-2">
@@ -215,7 +219,7 @@ export const Quotes: React.FC<QuotesProps> = ({ quotes = [], clients = [], produ
             </div>
 
             {/* ÁREA DE IMPRESSÃO (Papel Timbrado Profissional) */}
-            <div className="print:block bg-white p-8 rounded-[2rem] border-2 border-gray-50 shadow-sm print:border-0 print:shadow-none print:p-0">
+            <div className="printable bg-white p-8 rounded-[2rem] border-2 border-gray-50 shadow-sm print:border-0 print:shadow-none print:p-0">
                {/* Cabeçalho Proposta */}
                <div className="flex justify-between items-start mb-10 border-b-2 border-vprom-orange pb-8">
                   <div>
@@ -257,7 +261,7 @@ export const Quotes: React.FC<QuotesProps> = ({ quotes = [], clients = [], produ
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
-                      {selectedQuote.items.map((item, i) => {
+                      {(selectedQuote.items || []).map((item, i) => {
                         const prod = products.find(p => p.id === item.productId);
                         return (
                           <tr key={i}>
@@ -317,12 +321,23 @@ export const Quotes: React.FC<QuotesProps> = ({ quotes = [], clients = [], produ
       
       <style>{`
         @media print {
-          body * { visibility: hidden; }
+          /* Esconde tudo exceto a área imprimível */
+          body * { visibility: hidden !important; }
+          .print-container, .print-container .printable, .print-container .printable * { 
+            visibility: visible !important; 
+          }
+          .print-container {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 9999;
+            background: white;
+            padding: 20px;
+          }
           .no-print { display: none !important; }
-          .print-area, .print-area * { visibility: visible; }
-          .print-area { position: absolute; left: 0; top: 0; width: 100%; }
-          .Modal { background: white !important; padding: 0 !important; }
-          .print\\:block { display: block !important; }
+          .Modal { background: white !important; padding: 0 !important; border: 0 !important; box-shadow: none !important; }
         }
       `}</style>
     </div>
