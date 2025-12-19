@@ -24,7 +24,6 @@ const App: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   
-  // Notificações internas
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
 
@@ -62,18 +61,6 @@ const App: React.FC = () => {
     }
   };
 
-  const addInternalNotification = (title: string, message: string, type: AppNotification['type'] = 'info') => {
-    const newNotif: AppNotification = {
-      id: Date.now().toString(),
-      title,
-      message,
-      type,
-      date: new Date().toISOString(),
-      read: false
-    };
-    setNotifications(prev => [newNotif, ...prev]);
-  };
-
   const refreshAllData = async () => {
     setIsSyncing(true);
     try {
@@ -97,80 +84,50 @@ const App: React.FC = () => {
       setConstructionSites(cs || []);
       setInventoryMovements(im || []);
     } catch (err) {
-      console.error("Erro ao sincronizar dados:", err);
+      console.error("Erro ao sincronizar:", err);
     } finally {
       setIsSyncing(false);
     }
   };
 
   const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-      localStorage.clear();
-      sessionStorage.clear();
-      setSession(null);
-      setCurrentUser(null);
-      setNotifications([]);
-      window.location.replace('/'); 
-    } catch (err) {
-      console.error("Erro ao sair:", err);
-      window.location.reload();
-    }
+    await supabase.auth.signOut();
+    localStorage.clear();
+    sessionStorage.clear();
+    setSession(null);
+    setCurrentUser(null);
+    window.location.replace('/'); 
   };
 
   useEffect(() => {
-    const initAuth = async () => {
-      try {
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        setSession(currentSession);
-        if (currentSession?.user?.email) {
-          await fetchUserProfile(currentSession.user.email);
-        } else {
-          setAuthLoading(false);
-        }
-      } catch (err) {
-        setAuthLoading(false);
-      }
-    };
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      setSession(s);
+      if (s?.user?.email) fetchUserProfile(s.user.email);
+      else setAuthLoading(false);
+    });
 
-    initAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
-      if (event === 'SIGNED_OUT') {
-        setSession(null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+      setSession(s);
+      if (s?.user?.email) fetchUserProfile(s.user.email);
+      else {
         setCurrentUser(null);
         setAuthLoading(false);
-      } else if (newSession?.user?.email) {
-        setSession(newSession);
-        fetchUserProfile(newSession.user.email);
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  if (authLoading) {
-    return (
-      <div className="flex h-screen flex-col items-center justify-center bg-vprom-dark text-white font-black uppercase tracking-widest gap-4">
-        <RefreshCw className="animate-spin text-vprom-orange" size={32} />
-        <span>VPROM Siding System...</span>
-      </div>
-    );
-  }
-
+  if (authLoading) return <div className="h-screen flex items-center justify-center bg-vprom-dark text-white font-black uppercase tracking-widest">Carregando VPROM...</div>;
   if (!session && !currentUser) return <Login onOfflineLogin={setCurrentUser} />;
 
-  const navItems = ALL_TABS.filter(tab => 
-    currentUser?.role === 'programmer' || currentUser?.allowedTabs?.includes(tab.id)
-  );
-
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const navItems = ALL_TABS.filter(tab => currentUser?.role === 'programmer' || currentUser?.allowedTabs?.includes(tab.id));
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
       <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-vprom-dark text-white transform transition-transform duration-300 lg:relative lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full shadow-2xl'}`}>
         <div className="flex flex-col h-full">
-          <div className="p-8 border-b border-white/5 bg-black/20">
+          <div className="p-8 border-b border-white/5 bg-black/20 text-center">
             <h1 className="text-3xl font-black tracking-tighter">VPROM</h1>
             <span className="text-[9px] text-vprom-orange font-black uppercase tracking-[0.2em]">Siding System</span>
           </div>
@@ -197,30 +154,6 @@ const App: React.FC = () => {
               <button onClick={refreshAllData} disabled={isSyncing} className={`p-3 rounded-xl transition-all ${isSyncing ? 'bg-orange-50 text-vprom-orange' : 'bg-gray-50 text-gray-400'}`}>
                 <RefreshCw size={20} className={isSyncing ? 'animate-spin' : ''} />
               </button>
-              
-              <div className="relative">
-                <button 
-                  onClick={() => setIsNotifOpen(!isNotifOpen)}
-                  className={`p-3 rounded-xl transition-all bg-gray-50 hover:bg-gray-100 relative ${unreadCount > 0 ? 'text-vprom-orange' : 'text-gray-400'}`}
-                >
-                  <Bell size={20} />
-                  {unreadCount > 0 && (
-                    <span className="absolute top-2 right-2 w-4 h-4 bg-red-500 text-white text-[8px] font-black flex items-center justify-center rounded-full ring-2 ring-white">
-                      {unreadCount}
-                    </span>
-                  )}
-                </button>
-                <NotificationsPanel 
-                  notifications={notifications}
-                  isOpen={isNotifOpen}
-                  onClose={() => setIsNotifOpen(false)}
-                  onMarkRead={(id) => setNotifications(prev => prev.map(n => n.id === id ? {...n, read: true} : n))}
-                  onDelete={(id) => setNotifications(prev => prev.filter(n => n.id !== id))}
-                  onClearAll={() => setNotifications([])}
-                  onNavigate={setActiveTab}
-                />
-              </div>
-
               <div className="h-10 w-10 rounded-full bg-vprom-orange/10 flex items-center justify-center text-vprom-orange">
                 <ShieldCheck size={20} />
               </div>
@@ -230,30 +163,15 @@ const App: React.FC = () => {
         <main className="flex-1 overflow-y-auto p-4 md:p-10 bg-[#f8f9fb]">
           <div className="max-w-7xl mx-auto">
             {activeTab === 'dashboard' && <Dashboard financials={financials} clients={clients} appointments={appointments} constructionSites={constructionSites} onNavigate={setActiveTab} />}
-            {activeTab === 'inventory' && (
-              <Inventory 
-                products={products} 
-                movements={inventoryMovements} 
-                sites={constructionSites} 
-                onAddMovement={(m) => { 
-                  syncEngine.execute('inventory_movements', 'INSERT', m, () => setInventoryMovements(prev => [m, ...prev])); 
-                  addInternalNotification('Estoque', `${m.type === 'in' ? 'Entrada' : 'Saída'} de ${m.quantity} unidades registrada.`, 'info');
-                }} 
-                onUpdateProduct={(p) => {
-                  syncEngine.execute('products', 'UPDATE', p, () => setProducts(prev => prev.map(pr => pr.id === p.id ? p : pr)));
-                  if ((p.currentStock || 0) <= (p.minStock || 5)) {
-                    addInternalNotification('Atenção Estoque', `O item ${p.name} está com saldo baixo: ${p.currentStock}`, 'warning');
-                  }
-                }} 
-              />
-            )}
-            {activeTab === 'team' && <Team staff={staff} onAddStaff={(s) => syncEngine.execute('staff', 'INSERT', s, () => setStaff(prev => [...prev, s]))} onUpdateStaff={(s) => syncEngine.execute('staff', 'UPDATE', s, () => setStaff(prev => prev.map(st => st.id === s.id ? s : st)))} onDeleteStaff={(id) => syncEngine.execute('staff', 'DELETE', {id}, () => setStaff(prev => prev.filter(s => s.id !== id)))} />}
-            {activeTab === 'clients' && <Clients clients={clients} quotes={quotes} appointments={appointments} financials={financials} constructionSites={constructionSites} onAddClient={(c) => syncEngine.execute('clients', 'INSERT', c, () => setClients(prev => [...prev, c]))} onUpdateClient={(c) => syncEngine.execute('clients', 'UPDATE', c, () => setClients(prev => prev.map(cl => cl.id === c.id ? c : cl)))} onDeleteClient={(id) => syncEngine.execute('clients', 'DELETE', {id}, () => setClients(prev => prev.filter(cl => cl.id !== id)))} />}
-            {activeTab === 'products' && <Products products={products} categories={[]} units={[]} onAddProduct={(p) => syncEngine.execute('products', 'INSERT', p, () => setProducts(prev => [...prev, p]))} onUpdateProduct={(p) => syncEngine.execute('products', 'UPDATE', p, () => setProducts(prev => prev.map(pr => pr.id === p.id ? p : pr)))} onDeleteProduct={(id) => syncEngine.execute('products', 'DELETE', {id}, () => setProducts(prev => prev.filter(p => p.id !== id)))} onAddCategory={()=>{}} onDeleteCategory={()=>{}} onAddUnit={()=>{}} onDeleteUnit={()=>{}} />}
-            {activeTab === 'quotes' && <Quotes quotes={quotes} clients={clients} products={products} staff={staff} onAddQuote={(q) => { syncEngine.execute('quotes', 'INSERT', q, () => setQuotes(prev => [q, ...prev])); addInternalNotification('Novo Orçamento', `Orçamento para ${clients.find(c => c.id === q.clientId)?.name} gerado.`, 'info'); }} onUpdateQuote={(q) => syncEngine.execute('quotes', 'UPDATE', q, () => setQuotes(prev => prev.map(qu => qu.id === q.id ? q : qu)))} />}
-            {activeTab === 'construction_sites' && <ConstructionSites sites={constructionSites} clients={clients} staff={staff} onAddSite={(s) => syncEngine.execute('construction_sites', 'INSERT', s, () => setConstructionSites(prev => [...prev, s]))} onUpdateSite={(s) => syncEngine.execute('construction_sites', 'UPDATE', s, () => setConstructionSites(prev => prev.map(st => st.id === s.id ? s : st)))} onDeleteSite={(id) => syncEngine.execute('construction_sites', 'DELETE', {id}, () => setConstructionSites(prev => prev.filter(s => s.id !== id)))} />}
-            {activeTab === 'financials' && <Financials financials={financials} clients={clients} constructionSites={constructionSites} onAddTransaction={(t) => syncEngine.execute('financial_records', 'INSERT', t, () => setFinancials(prev => [t, ...prev]))} onUpdateTransaction={(t) => syncEngine.execute('financial_records', 'UPDATE', t, () => setFinancials(prev => prev.map(f => f.id === t.id ? t : f)))} />}
-            {activeTab === 'agenda' && <Agenda appointments={appointments} clients={clients} staff={staff} onAddAppointment={(a) => { syncEngine.execute('appointments', 'INSERT', a, () => setAppointments(prev => [...prev, a])); addInternalNotification('Agendamento', `Nova visita para ${clients.find(c => c.id === a.clientId)?.name}`, 'info'); }} onUpdateAppointment={(a) => syncEngine.execute('appointments', 'UPDATE', a, () => setAppointments(prev => prev.map(ap => ap.id === a.id ? a : ap)))} onDeleteAppointment={(id) => syncEngine.execute('appointments', 'DELETE', {id}, () => setAppointments(prev => prev.filter(a => a.id !== id)))} onCreateQuoteFromAppointment={()=>{}} />}
+            {activeTab === 'inventory' && <Inventory products={products} movements={inventoryMovements} sites={constructionSites} onAddMovement={(m) => syncEngine.execute('inventory_movements', 'INSERT', m, () => setInventoryMovements(p => [m, ...p]))} onUpdateProduct={(p) => syncEngine.execute('products', 'UPDATE', p, () => setProducts(prev => prev.map(x => x.id === p.id ? p : x)))} />}
+            {activeTab === 'team' && <Team staff={staff} onAddStaff={(s) => syncEngine.execute('staff', 'INSERT', s, () => setStaff(p => [...p, s]))} onUpdateStaff={(s) => syncEngine.execute('staff', 'UPDATE', s, () => setStaff(p => p.map(x => x.id === s.id ? s : x)))} onDeleteStaff={(id) => syncEngine.execute('staff', 'DELETE', {id}, () => setStaff(p => p.filter(x => x.id !== id)))} />}
+            {activeTab === 'clients' && <Clients clients={clients} quotes={quotes} appointments={appointments} financials={financials} constructionSites={constructionSites} onAddClient={(c) => syncEngine.execute('clients', 'INSERT', c, () => setClients(p => [...p, c]))} onUpdateClient={(c) => syncEngine.execute('clients', 'UPDATE', c, () => setClients(p => p.map(x => x.id === c.id ? c : x)))} onDeleteClient={(id) => syncEngine.execute('clients', 'DELETE', {id}, () => setClients(p => p.filter(x => x.id !== id)))} />}
+            {/* Fix: Shadowing variable 'p' caused type error in setProducts. Renamed parameter to 'newProd' and state parameter to 'prev'. */}
+            {activeTab === 'products' && <Products products={products} categories={[]} units={[]} onAddProduct={(newProd) => syncEngine.execute('products', 'INSERT', newProd, () => setProducts(prev => [...prev, newProd]))} onUpdateProduct={(p) => syncEngine.execute('products', 'UPDATE', p, () => setProducts(prev => prev.map(x => x.id === p.id ? p : x)))} onDeleteProduct={(id) => syncEngine.execute('products', 'DELETE', {id}, () => setProducts(p => p.filter(x => x.id !== id)))} onAddCategory={()=>{}} onDeleteCategory={()=>{}} onAddUnit={()=>{}} onDeleteUnit={()=>{}} />}
+            {activeTab === 'quotes' && <Quotes quotes={quotes} clients={clients} products={products} staff={staff} onAddQuote={(q) => syncEngine.execute('quotes', 'INSERT', q, () => setQuotes(p => [q, ...p]))} onUpdateQuote={(q) => syncEngine.execute('quotes', 'UPDATE', q, () => setQuotes(p => p.map(x => x.id === q.id ? q : x)))} />}
+            {activeTab === 'construction_sites' && <ConstructionSites sites={constructionSites} clients={clients} staff={staff} onAddSite={(s) => syncEngine.execute('construction_sites', 'INSERT', s, () => setConstructionSites(p => [...p, s]))} onUpdateSite={(s) => syncEngine.execute('construction_sites', 'UPDATE', s, () => setConstructionSites(p => p.map(x => x.id === s.id ? s : x)))} onDeleteSite={(id) => syncEngine.execute('construction_sites', 'DELETE', {id}, () => setConstructionSites(p => p.filter(x => x.id !== id)))} />}
+            {activeTab === 'financials' && <Financials financials={financials} clients={clients} constructionSites={constructionSites} onAddTransaction={(t) => syncEngine.execute('financial_records', 'INSERT', t, () => setFinancials(p => [t, ...p]))} onUpdateTransaction={(t) => syncEngine.execute('financial_records', 'UPDATE', t, () => setFinancials(p => p.map(x => x.id === t.id ? t : x)))} />}
+            {activeTab === 'agenda' && <Agenda appointments={appointments} clients={clients} staff={staff} onAddAppointment={(a) => syncEngine.execute('appointments', 'INSERT', a, () => setAppointments(p => [...p, a]))} onUpdateAppointment={(a) => syncEngine.execute('appointments', 'UPDATE', a, () => setAppointments(p => p.map(x => x.id === a.id ? a : x)))} onDeleteAppointment={(id) => syncEngine.execute('appointments', 'DELETE', {id}, () => setAppointments(p => p.filter(x => x.id !== id)))} onCreateQuoteFromAppointment={()=>{}} />}
           </div>
         </main>
       </div>
