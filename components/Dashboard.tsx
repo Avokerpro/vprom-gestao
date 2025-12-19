@@ -1,8 +1,8 @@
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
 import { FinancialRecord, Client, Appointment, ConstructionSite, TRANSLATIONS } from '../types';
-import { Wallet, AlertTriangle, CheckCircle, TrendingUp, TrendingDown, Calendar, ArrowRight, HardHat, AlertCircle, Wifi, Database, Bell, Volume2, Smartphone, ShieldCheck, Settings } from 'lucide-react';
+import { Wallet, AlertTriangle, CheckCircle, TrendingUp, TrendingDown, Calendar, ArrowRight, HardHat, AlertCircle, Wifi, Database } from 'lucide-react';
 
 interface DashboardProps {
   financials: FinancialRecord[];
@@ -10,21 +10,9 @@ interface DashboardProps {
   appointments: Appointment[];
   constructionSites: ConstructionSite[];
   onNavigate: (tab: any) => void;
-  onSetupAlerts?: () => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ financials = [], clients = [], appointments = [], constructionSites = [], onNavigate, onSetupAlerts }) => {
-  const [notifPermission, setNotifPermission] = useState<string>(Notification.permission);
-  const [isPWA, setIsPWA] = useState(false);
-  
-  useEffect(() => {
-    setIsPWA(window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone);
-    const interval = setInterval(() => {
-        setNotifPermission(Notification.permission);
-    }, 2000);
-    return () => clearInterval(interval);
-  }, []);
-
+export const Dashboard: React.FC<DashboardProps> = ({ financials = [], clients = [], appointments = [], constructionSites = [], onNavigate }) => {
   const stats = useMemo(() => {
     const safeFinancials = Array.isArray(financials) ? financials : [];
     return safeFinancials.reduce((acc, curr) => {
@@ -50,9 +38,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ financials = [], clients =
     const startOfWeek = new Date(today.setDate(diff)).setHours(0,0,0,0);
     const endOfWeek = startOfWeek + (7 * 86400000);
 
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
-
     let dayCount = 0;
     let weekCount = 0;
     let monthCount = 0;
@@ -65,7 +50,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ financials = [], clients =
       if (appt.status !== 'cancelled' && appt.status !== 'closed_deal') {
         if (apptTime >= startOfDay && apptTime < endOfDay) dayCount++;
         if (apptTime >= startOfWeek && apptTime < endOfWeek) weekCount++;
-        if (apptDate.getMonth() === currentMonth && apptDate.getFullYear() === currentYear) monthCount++;
+        if (apptDate.getMonth() === today.getMonth() && apptDate.getFullYear() === today.getFullYear()) monthCount++;
         
         if (apptTime >= startOfDay) upcoming.push(appt);
       }
@@ -89,12 +74,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ financials = [], clients =
     }).sort((a,b) => a.expectedEndDate!.localeCompare(b.expectedEndDate!));
   }, [constructionSites]);
 
-  const chartData = useMemo(() => {
-    return [
-      { name: 'Entradas', amount: stats.totalIncome },
-      { name: 'Saídas', amount: stats.totalExpenses },
-    ];
-  }, [stats]);
+  const chartData = useMemo(() => [
+    { name: 'Entradas', amount: stats.totalIncome },
+    { name: 'Saídas', amount: stats.totalExpenses },
+  ], [stats]);
 
   const pieData = useMemo(() => {
     const safeFinancials = Array.isArray(financials) ? financials : [];
@@ -113,44 +96,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ financials = [], clients =
         <h2 className="text-2xl font-bold text-vprom-dark">Painel de Controle</h2>
         <div className="flex items-center gap-2 text-xs font-medium text-green-600 bg-green-50 px-3 py-1 rounded-full border border-green-200">
            <Wifi size={14} /> Sistema Online
-        </div>
-      </div>
-
-      <div className={`bg-white rounded-[2.5rem] p-8 shadow-xl border-4 transition-all overflow-hidden relative ${isPWA && notifPermission === 'granted' ? 'border-green-500/10' : 'border-vprom-orange/10'}`}>
-        <div className="absolute top-0 right-0 p-8 opacity-5 text-vprom-orange">
-          {isPWA ? <ShieldCheck size={120} className="text-green-500" /> : <Smartphone size={120} />}
-        </div>
-        <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
-          <div className="flex-1 text-center md:text-left">
-            <h3 className="text-2xl font-black text-vprom-dark uppercase tracking-tighter mb-2">
-              {isPWA ? 'Proteção Técnica Ativa' : 'Configuração de Alertas'}
-            </h3>
-            <p className="text-gray-500 text-sm font-medium leading-relaxed max-w-md">
-              {isPWA 
-                ? 'O sistema está instalado e autorizado a emitir sirenes de compromissos mesmo com a tela desligada.' 
-                : 'Instale o VPROM e ative as notificações para receber avisos de agenda em tempo real.'}
-            </p>
-            <div className="flex flex-wrap justify-center md:justify-start gap-4 mt-6">
-               <div className={`flex items-center gap-2 px-4 py-2 rounded-2xl border ${notifPermission === 'granted' ? 'bg-green-50 border-green-200 text-green-600' : 'bg-gray-50 border-gray-100 text-gray-300'}`}>
-                  <Bell size={16} />
-                  <span className="text-[10px] font-black uppercase tracking-widest">{notifPermission === 'granted' ? 'Alertas ON' : 'Alertas OFF'}</span>
-               </div>
-               <div className={`flex items-center gap-2 px-4 py-2 rounded-2xl border ${isPWA ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-gray-50 border-gray-100 text-gray-300'}`}>
-                  <Smartphone size={16} />
-                  <span className="text-[10px] font-black uppercase tracking-widest">{isPWA ? 'App Instalado' : 'Modo Web'}</span>
-               </div>
-            </div>
-          </div>
-          <button 
-            onClick={onSetupAlerts}
-            className={`w-full md:w-auto px-10 py-6 rounded-3xl font-black uppercase tracking-[0.1em] text-xs shadow-2xl transition-all flex items-center justify-center gap-3 group active:scale-95 ${isPWA && notifPermission === 'granted' ? 'bg-vprom-dark text-white' : 'bg-vprom-orange text-white shadow-vprom-orange/30 hover:scale-105'}`}
-          >
-            {isPWA && notifPermission === 'granted' ? (
-              <><ShieldCheck size={20} /> Sistema Configurado</>
-            ) : (
-              <><Settings className="group-hover:rotate-90 transition-transform" size={20} /> Ativar Alertas Críticos</>
-            )}
-          </button>
         </div>
       </div>
 
@@ -192,7 +137,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ financials = [], clients =
                         <span className="text-gray-300 font-medium group-hover:text-white transition">{appt.time}</span>
                         <span className="text-white truncate">{client?.name}</span>
                       </div>
-                      <span className={`text-xs px-2 py-0.5 rounded ${appt.status === 'to_visit' ? 'bg-blue-900 text-blue-200' : 'bg-yellow-900 text-yellow-200'}`}>
+                      <span className={`text-xs px-2 py-0.5 rounded ${appt.status === 'visited' ? 'bg-green-900 text-green-200' : 'bg-blue-900 text-blue-200'}`}>
                         {TRANSLATIONS.appointment_status[appt.status as keyof typeof TRANSLATIONS.appointment_status] || appt.status}
                       </span>
                     </div>
@@ -218,7 +163,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ financials = [], clients =
               ) : (
                 expiringSites.map(site => {
                    const client = Array.isArray(clients) ? clients.find(c => c.id === site.clientId) : null;
-                   const isLate = new Date(site.expectedEndDate!) < new Date(new Date().setHours(0,0,0,0));
+                   const isLate = site.expectedEndDate && new Date(site.expectedEndDate) < new Date(new Date().setHours(0,0,0,0));
                    return (
                       <div key={site.id} onClick={() => onNavigate('construction_sites')} className="bg-white p-3 rounded-lg border border-orange-200 shadow-sm flex flex-col gap-1 cursor-pointer hover:bg-orange-100 transition group">
                          <div className="flex justify-between items-start">
@@ -228,7 +173,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ financials = [], clients =
                          <div className="flex justify-between items-center text-xs mt-1">
                             <span className="text-gray-500 truncate">{site.address}</span>
                             <span className={`font-bold px-2 py-0.5 rounded ${isLate ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>
-                               {new Date(site.expectedEndDate!).toLocaleDateString()}
+                               {site.expectedEndDate ? new Date(site.expectedEndDate).toLocaleDateString() : '--'}
                             </span>
                          </div>
                       </div>
